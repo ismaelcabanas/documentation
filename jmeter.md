@@ -61,3 +61,16 @@ diseñar nuestros tests y construirlos con JMeter.
 
 ### Preparción del entorno de test
 
+Deberíamos tener un entorno lo más similar posible al entorno de producción. 
+
+Luego, para ejecutar los tests, lo primero que tenemos que hacer es validar el script del test y los datos para comprobar que
+todo funciona como debe. Debemos comprobar los logs para ver si hay errores y luego analizar si éstos son producidos por 
+los tests, la aplicación, el servidor o una combinación de estos.
+
+Después de analizar los resultados, se toman acciones para solucionar esos problemas como: optimizar consultas a la base 
+de datos, incrementar la memoria disponible para la aplicación, o cualquier otra cosa. 
+
+Después de cada cambio realizado, se vuelven a ejecutar estos tests de rendimiento y se comparan los resultados obtenidos 
+con los anteriores para comprobar que dan resultados positivos, de lo contrario, se siguen haciendo cambios y se vuelve a 
+repetir el proceso hasta que los requisitos de rendiemiento se satisfagan.
+
