@@ -37,13 +37,27 @@ no son solo para medir velocidad. En particular, podemos medir:
   rendimiento y porcentaje de errores cuando al sistema se le añaden nuevos recursos, funcionalidades, etc... Por ejemplo, 
   la escalabilidad nos ayuda a saber qué podríamos necesitar en nuestro sistema para tener una carga de 10000 clientes o usuarios.
   
-  Podríamos optar por **escalabilidad vertical**, añadiendo más memoria o CPUs a nuestro servidor, o **escalabilidad horizontal**, 
+  Podríamos optar por **escalabilidad vertical**, añadiendo más memoria o CPUs a nuestro servidor, o **escalabilidad    horizontal**, 
   añadiendo servidores en un clúster.
-  
+
+## Proceso de tests de rendimiento
+
 ### Requisitos de rendimiento
 
 Antes de crear un sistema es conveniente saber qué requisitos de rendimiento necesitamos en nuestro sistema. Éstos, a veces 
 nos vienen dado por contrato o acuerdos, y otras, somos nosotros los que debemos establecer esos requisitos antes de testear 
 el sistema.
 
+Ejemplos de este tipo de requisitos podría ser: el tiempo medio/máximo de respuesta debería ser 800 ms, el sistema debería ser
+capaz de soportar 60 páginas por segundo, o el sistema debería ser capaz de soportar al menos 10000 usuarios por hora.
+
+### Diseño y construcción de los tests
+
+Una vez tenemos estos requisitos, podemos diseñar y construir unos tests.
+
+Tenemos que tener claros cuales son los patrones de uso de la aplicación, por ejemplo, cuántos comunicados queremos que se 
+envíen por minuto?, o cuántos gestores pueden navegar a la vez en la gestión de candidatos en un momento dado?. Esto ayuda a
+diseñar nuestros tests y construirlos con JMeter.
+
+### Preparción del entorno de test
 
