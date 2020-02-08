@@ -74,3 +74,32 @@ Después de cada cambio realizado, se vuelven a ejecutar estos tests de rendimie
 con los anteriores para comprobar que dan resultados positivos, de lo contrario, se siguen haciendo cambios y se vuelve a 
 repetir el proceso hasta que los requisitos de rendiemiento se satisfagan.
 
+## Tipos de tests de rendimiento
+
+Existen dos maneras de generar tests de carga:
+
+ 1.- Incrementar el número de usuarios que acceden a la aplicación al mismo tiempo.
+ 2.- Incrementar el número de peticiones que la aplicación tiene que gestionar, independientemente del número de usuarios.
+ 
+Una vez decidamos qué tipo de carga que vamos a usar debemos decidir qué tipo de test vamos a ejecutar. 
+
+El primer tipo de test que deberíamos ejecutar es un **Smoke Test**, que es un test con una carga ligera, generalemente un usuario para comprobar que el test se funciona bien.
+
+Después, realizamos un **Load Test** (test de carga), que es un test realizado con un nivel de carga específico. Normalmente, 
+haremos varios de estos tests con diferentes niveles de carga para ver cómo se comporta la aplicación.
+
+Haremos un **Stress Test** con un nivel de carga que supera los niveles de carga normales para ver hasta qué punto
+la aplicación permanece estable y respondiendo. En un test de estrés, iremos incrementando los usuarios en pasos o de forma
+constante en un periodo de tiempo, o podemos incrementar los usuarios en un gran número durante un largo periodo de tiempo 
+para averiguar en qué punto la aplicación deja de funcionar.
+
+Tenemos también los **Spike Test**, en los que la aplicación es sometida a picos repentinos de carga que superan los límites de 
+su capacidad para ver si después de esos picos de carga la aplicación es lo suficientemente **robusta** como para seguir 
+funcionando durante y después del Spike Test.
+
+Los **Endurance Test** son tests en los que la aplicación es sometida a un carga dentro de los límites que ésta puede 
+soportar pero durante un largo periodo de tiempo, horas o en algunos casos días, para ver si la aplicación tiene memory leaks
+o no cierra bien las conexiones a base de datos o entrada y salida.
+
+
+
