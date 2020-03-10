@@ -101,5 +101,5 @@ Los **Endurance Test** son tests en los que la aplicación es sometida a un carg
 soportar pero durante un largo periodo de tiempo, horas o en algunos casos días, para ver si la aplicación tiene memory leaks
 o no cierra bien las conexiones a base de datos o entrada y salida.
 
-
+### Spike Test en JMeter
 
