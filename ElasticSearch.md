@@ -27,7 +27,30 @@ Hay varias tecnologías especializadas en cada uno de estos pasos. Por ejemplo, 
 
 ## El índice invertido
 
+Antes de avanzar, vamos a intentar entender el índice invertido, la estructura de datos del corazón de cualquier algoritmo de búsqueda. 
 
+El primer paso es conocer la existencia de los documentos para ser indexados y posteriormente buscados. El contenido de los documentos es parseado y dividido en palabras individuales normalizadas en minúsculas, para que todas las palabras puedan compararse en minúsculas, y se elimina cualquier signo de puntuación en las palabras.
+
+Cada palabra tiene asignada una frecuencia. La frecuencia determina el número de veces que aparece la palabra en los documentos que tenemos indexados.
+
+Junto con las palabras y su correspondiente frecuencia, el índice invertido contiene el documento donde aparece cada palabra. Cada palabra que contiene el índice invertido puede aparecer en uno o más documentos. Resumiendo, el índice invertido son todas las diferentes palabras junto con la frecuencia de aparición y los documentos en los que aparece.
+
+A las palabras y su frecuencia correspondiente se le llama **diccionario**. 
+
+
+## Instalación
+
+Cuando arrancamos un ES lo que se crea es un clúster, para facilitar la escalabilidad.
+
+## Tipos de nodo
+
+En ES hay 4 tipos de nodos:
+
+ - Nodos maestros se encargan de configurar y administrar el clustes de ES, como por ejemplo, para añadir nuevos nodos hay que hacerlo a través de los nodos maestros.
+ - Nodos de datos se encargan de almacenar documentos. Este tipo de nodos tiene sentido hacer réplicas.
+ - Nodos cliente sirven para comunicarnos con el nodo maestro o para recoger información.
+ - Nodos de ingesta se encargan de preprocesar los documentos antes de almacenarlos. Son poco frecuentes. Por ejemplo, si la indexación de documentos es un cuello de botella porque en un corto periodo de tiempo se tienen que indexar miles de documentos, entonces se puede crear un nodo de ingesta para que procese esta información.
+ 
 
 ## Documentos
 
