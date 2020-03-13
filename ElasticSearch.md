@@ -19,8 +19,11 @@ documentos más relevantes que existan que cumplan con los criterios de búsqued
 búsqueda ocurren varias cosas por detrás para llevar a cabo esto.
 
 1.- El motor de búsqueda debe tener conocimiento de la existencia de documentos, encontrarlo e indexarlo.
+
 2.- La indexación de un documento es necesario para que se puedan hacer búsquedas en el futuro.
+
 3.- Por cada palabra de búsqueda que realiza el usuario, tenemos que conocer cómo de relevante es el documento que la contiene. La relevancia es la combinación de los términos de búsqueda más el documento en sí.
+
 4.- La búsqueda en sí misma.
 
 Estos 4 componentes podrían resumir los componentes necesarios para realizar una búsqueda.
@@ -69,9 +72,32 @@ Elasticsearch está desarrollado por la compañía [Elastic](http://elastic.co),
  - X-Pack: es una herramienta de monitorización y reporte.
  - Cloud: que permite tener a Elasticsearch y Kibana en AWS.
  
- 
-
 ## Instalación
+
+Para instalar Elasticsearch descargamos del sitio oficial la versión que deseemos descargar. En este caso he bajado la versión 7.6.1.
+
+Una vez descargado, descomprimimos el fichero y desde un nivel superior a la carpeta donde hemos descomprimido el fichero ejecutamos 
+
+```./elasticsearch-7.6.1/bin/elasticsearch```
+
+Con esto arrancamos un nodo de Elasticsearch corriendo en local en un clúster que por defecto se llama **elasticsearch**. Y podemos ver en las trazas que ha creado un nodo con un identificador autogenerado.
+
+```[AFE0811358.home] initialized```
+
+Podemos arrancar otros nodos al mismo clúster con la misma instrucción indicando el nombre del clúster.
+
+Si queremos dar un nombre específico al clúster y al nodo, podemos hacerlo de la siguiente manera
+
+```./elasticsearch-7.6.1/bin/elasticsearch -Ecluster.name=isma_es -Enode.name=my_first_node```
+
+### Conceptos básicos de Elasticsearch
+
+Elasticsearch permite hacer búsquedas prácticamente en tiempo real, con una latencia de aproximadamente 1 segundo entre el tiempo que un documento es indexado y el tiempo en el que el documento está disponible para ser buscado.
+
+
+
+
+
 
 Cuando arrancamos un ES lo que se crea es un clúster, para facilitar la escalabilidad.
 
