@@ -10,7 +10,9 @@ e indexación, Elasticsearch amplía Lucene añadiendo una cómoda API REST basa
 con Lucene y además provee las características de sistema distribuido que permite escalar la herramienta de forma casi 
 transparente al usuario.
 
-## Cómo funciona una búsqueda
+## Empezando
+
+### Cómo funciona una búsqueda
 
 Cualquier aplicación que se precie necesita buscar de alguna forma la información que posee. **Buscar** es encontrar los 
 documentos más relevantes que existan que cumplan con los criterios de búsqueda. Esto parece sencillo pero, en un motor de
@@ -25,7 +27,7 @@ Estos 4 componentes podrían resumir los componentes necesarios para realizar un
 
 Hay varias tecnologías especializadas en cada uno de estos pasos. Por ejemplo, para el punto 1, un rastreador web rastrea todas las páginas con sus links para tener una visión de todos los documentos que existen. En el punto 2, se indexa cada documento encontrado por el rastreador, es decir, se parsean para que los términos individuales se extraigan y almacenen en una estructura de datos llamada el índice invertido. **El índice invertido es un mapeo de un término al documento donde el término es encontrado**. Es invertido porque va desde el término de búsqueda a la página web del documento. Basado en lo que el usuario buscaba, cada documento tendrá asociado una puntuación llamada puntuación relevante (punto 3). Los documentos tienen que estar puntuados antes que se devuelvan los resultados para que aquellos documentos con las puntuaciones más altas se muestren en los más alto del resultado de la búsqueda. La relevancia es calcula en función del término de búsqueda, así como el documento en sí mismo. Por último (punto 4) el proceso de la búsqueda en sí misma, se buscan los documentos en el índice invertido, encuentra los más relevantes y los devuelve en lo más alto del resultado de búsquedas. Aunque los algoritmos de búsqueda son más complejos que esto, se puede decir que estos 4 pasos son el core de cualquier algoritmo de búsqueda.
 
-## El índice invertido
+### El índice invertido
 
 Antes de avanzar, vamos a intentar entender el índice invertido, la estructura de datos del corazón de cualquier algoritmo de búsqueda. 
 
@@ -35,8 +37,39 @@ Cada palabra tiene asignada una frecuencia. La frecuencia determina el número d
 
 Junto con las palabras y su correspondiente frecuencia, el índice invertido contiene el documento donde aparece cada palabra. Cada palabra que contiene el índice invertido puede aparecer en uno o más documentos. Resumiendo, el índice invertido son todas las diferentes palabras junto con la frecuencia de aparición y los documentos en los que aparece.
 
-A las palabras y su frecuencia correspondiente se le llama **diccionario**. 
+A las palabras y su frecuencia correspondiente se le llama **diccionario**. Normalmente, el diccionario está ordenado para que la búsqueda de una determinado palabra sea muy efectiva. Cuando introducimos un término para realizar una búsqueda, éste se busca en el diccionario ordenado y los correspondientes documentos donde ha aparecido (llamados **postings**), que en terminología de índice invertido se llama la **posting list**.
 
+Por ejemplo, dado que tenemos el siguiente ejemplo de índice invertido, si buscamos por el término *winter*, éste lo encontraríamos en el índice invertido, y veríamos que el origen dónde aparece el elemento es *Stark*. Y por lo tanto, el posicionamiento sería (posting list) el documento Stark. Este resultado es el que devolveríamos en la búsqueda. Mientras que, si por ejemplo, buscásemos el término *is*, como éste aparece en dos documentos, el resultado de la búsqueda sería dos regisros, *Stark* y *Baratheon*. 
+
+Podemos hacer búsqueda más complejas combinando términos de búsqueda con AND o OR. O por ejemplo, búsquedas que terminen en **ong**, el índice invertido escanea todas las palabras que contiene y les da la vuelta mapeándola a los mismos documentos origen. Igualmente, para hacer búsquedas de substrings, el índice invertido utiliza otra técnica usando el índice invertido. O para hacer búsquedas geográficas, utiliza otro tipo de técnicas usando el índice invertido.
+
+En definitiva, el índice invertido es el corazón de cualquier motor de búsqueda.
+
+### Lucene: el motor de búsqueda
+
+Apache Lucene es un motor de búsqueda Open Source. Lucene es una librería de indexación y búsqueda de alto rendimiento que ofrece además búsqueda full text. Lucene puede ser utilizado como motor de búsqueda para cualquier plataforma y aplicación. Proporciona capacidades de escrapeo y parseado de documentos. Lucene proporciona también algoritmos de búsqueda muy eficientes escritos originalmente en Java, pero puede ser portado a otros lenguajes.
+
+Lucene es el núcleo de otras tecnologías que están construidas alrededor de Lucene, como por ejemplo Solr que añade indexación distribuída, balanceo de carga, replicación, recuperación automática, etc... Elasticsearch es otro ejemplo de tecnología que por debajo tiene a Lucene como motor de búsqueda permitiendo un motor de búsquedas distribuídas y un motor de análisis de datos.
+
+### Elasticsearch
+
+Elasticsearch es una tecnología Open Source. Es un motor de búsqueda y análisis escrito en Java y que usa Apache Lucene como la librería core para realizar las búsquedas. Es decir, no solo se usa para buscar sobre documentos sino también para analizar y hacer agregaciones complejas sobre los resultados de búsqueda.
+
+Pero, cuales son los puntos fuertes de Elasticsearch?
+1.- **Distribución**: permite escalar a miles de nodos en un sólo clúster lo que implica un alto rendimiento en las operaciones de búsqueda.
+2.- **Alta disponibilidad**: es tolerante a fallos ya que tiene varias copias de la información en el clúster. Cada índice es replicado.
+3.- **API REST**: existe un API REST sencillo para realizar operaciones CRUD sobre índices y documentos.
+4.- **DSL potente**: posee un DSL para poder expresar consultas complejas con un lenguaje de dominio sencillo usando JSON.
+5.- **Schemaless**: todos los documentos e índices que se almacenan en Elasticsearch no necesitan de un esquema ni tipado de datos.
+
+Elasticsearch está desarrollado por la compañía [Elastic](http://elastic.co), desde el 2015. Elastic tiene además otros productos relacionados con Elasticsearch, como por ejemplo:
+ - Kibana: es una herramienta de visualización para navegar por los documentos almacenados en Elasticsearch.
+ - Beats: es un agente que envía datos desde otras máquinas para que lleguen a Elasticsearch.
+ - Logstash: es un procesador de datos que puede analizar datos que vienen de varios orígenes.
+ - X-Pack: es una herramienta de monitorización y reporte.
+ - Cloud: que permite tener a Elasticsearch y Kibana en AWS.
+ 
+ 
 
 ## Instalación
 
