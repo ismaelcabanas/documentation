@@ -94,12 +94,52 @@ Si queremos dar un nombre específico al clúster y al nodo, podemos hacerlo de 
 
 Elasticsearch permite hacer búsquedas prácticamente en tiempo real, con una latencia de aproximadamente 1 segundo entre el tiempo que un documento es indexado y el tiempo en el que el documento está disponible para ser buscado.
 
+#### Nodos
+Elasticsearch es distribuido por naturaleza. Se ejecuta en varias máquinas dentro un **clúster**. Una de esas máquinas dentro del clúster es un **nodo**.
+
+Cada nodo dentro del clúster realiza las operaciones de indexación para poder indexar todos los documentos que se añaden a Elasticsearch. Todos los nodos también participan en las operaciones de búsqueda y análisis. Cualquier búsqueda se ejecutará en varios nodos en paralelo.
+
+Cada nodo dentro del clúster tiene un identificador y nombre único. Estos datos son para referirnos a un nodo en las tareas de administración del clúster.
+
+#### Clúster
+Un **cluster** es una colección de nodos que operan juntos para llevar a cabo un mismo objetivo. Un clúster de Elasticsearch puede escalar a cientos e incluso miles de nodos, o incluso un único nodo en el clúster. Cualquier índice que se cree para que los documentos sean susceptibles de ser buscados se guardan en el clúster. Todo clúster tiene un nombre único, que si no se especifica, por defecto es **elasticsearch**. 
+
+La forma que tenemos de escalar es añadir nuevos nodos al clúster especificando el nombre de éste a la hora de levantarlo. Los nodos dentro del clúster se encontrán a sí mismos dentro de Elasticsearch enviándose mensajes. Las máquinas que representan los nodos dentro del clúster deben estar en la misma red.
+
+#### Tipos de documentos
+Los **documentos** es la información que vamos a querer almacenar en Elasticsearch. Éstos pueden tener cualquier información dependiendo de nuestro modelo de negocio. Al final, los documentos en nuestro modelo se dividen en categorías o tipos formando una agrupación de documentos. 
+
+Cada uno de estos tipos de documentos forman un **índice**, que es dónde se va a buscar. Por ejemplo, en un Site de Blogs, los artículos serían un tipo de documento, los comentarios sobre los artículos podrían ser otro tipo de documento. No es condición necesaria para Elasticsearch que un índice esté formado por un único tipo de documento, un índice puede estar formado por documentos de distintos tipos.
+
+#### Índice
+El índice en Elasticsearch se refiere a un conjunto de documentos similares. No necesitan ser exactamente del mismo tipo. Un índice se identifica únicamente en un clúster por su nombre, y se pueden tener cualquier número de índices dentro de un clúster. Lo normal es que los índices estén formados por documentos del mismo tipo porque luego se querrán hacer búsquedas sobre ellos. Los documentos con los mismos campos suelen pertenecer a un tipo. 
+
+Un **tipo de documento** es una colección de documentos con las mismas características dentro de un índice.
+
+#### Documentos
+Un **documento** es la unidad de información que necesita ser indexada. Solamente es un contenedor de texto que necesita ser buscado. Los documentos en Elasticsearch son expresados en JSON. Todos los documentos se encuentran en un índice. Un documento es asignado a un tipo y un índice. Con el tipo y el índice logramos identificar un conjunto de documentos. Un índice puede estar compuesto por una gran cantidad de documentos, y puede pasar que almacenar todos estos documentos ocupen una gran cantidad de espacio y no quepan físicamente en un disco de un solo nodo. 
+
+#### Shards o fragmentos
+
+Si el número de documentos a almacenar es muy grande o el tamaño de estos documentos es enorme entonces el índice puede llegar a ser demasiado grande para que quepa en un solo nodo. Esto hará que nuestras búsquedas sean demasiado lentas. Para solucionar este problema se aconseja que el índice se separe entre varias máquinas o nodos en el clúster. Este proceso se llama **fragmentación (sharding)** de datos. Por eso, la solución es separar el índice a través de varios nodos en el clúster, donde cada nodo contenga una fragmentación (shard) del índice, es decir, que cada nodo tendrá sólo un subconjunto de datos del índice. El índice completo será la combinación de poner todos los nodos juntos. Y el concepto de **shards** o fragmentos, es lo que nos permite realizar búsquedas en paralelo en diferentes nodos. Lo que se hace en definitiva es, cuando buscamos un término, buscar de forma paralela en subconjunto de datos que son más pequeños y por tanto más fácil de encontrar lo que buscamos.
+
+#### Réplicas
+
+Para tener alta disponibilidad de la información y tolerantes a fallos necesitamos replicar la información. Esto se hace configurando **réplicas** de nuestro índice. Cada **shard** tendrá una réplica. Así, si uno de nuestros nodos falla, su información estará replicada en un shard de otro nodo.
+
+Así que, fragmentando nuestro índice y replicando cada shard es como conseguimos que las operaciones de búsqueda sean eficientes y rápidas, y que nuestro clúster sea tolerante a fallos y altamente disponible.
+
+Con los shards conseguimos también escalar en volumen y rendimiento buscando entre todas las réplicas a la vez.
+
+#### Conclusión
+
+Un índice se puede separar en varios máquinas, y esos subconjuntos de índice se le llaman **shards**.
+
+Un **shard** puede ser **replicado** cero o más veces. Podemos tener tantas réplicas como pensemos que vayamos a necesitar.
+
+Por defecto, Elasticsearch tiene 5 shards y 1 réplica. Así que, cada shard tiene un backup 
 
 
-
-
-
-Cuando arrancamos un ES lo que se crea es un clúster, para facilitar la escalabilidad.
 
 ## Tipos de nodo
 
@@ -111,6 +151,3 @@ En ES hay 4 tipos de nodos:
  - Nodos de ingesta se encargan de preprocesar los documentos antes de almacenarlos. Son poco frecuentes. Por ejemplo, si la indexación de documentos es un cuello de botella porque en un corto periodo de tiempo se tienen que indexar miles de documentos, entonces se puede crear un nodo de ingesta para que procese esta información.
  
 
-## Documentos
-
-Es la unidad básica de información de ES.
