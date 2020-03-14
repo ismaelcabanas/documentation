@@ -72,7 +72,7 @@ Elasticsearch está desarrollado por la compañía [Elastic](http://elastic.co),
  - X-Pack: es una herramienta de monitorización y reporte.
  - Cloud: que permite tener a Elasticsearch y Kibana en AWS.
  
-## Instalación
+### Instalación
 
 Para instalar Elasticsearch descargamos del sitio oficial la versión que deseemos descargar. En este caso he bajado la versión 7.6.1.
 
@@ -100,6 +100,15 @@ Elasticsearch es distribuido por naturaleza. Se ejecuta en varias máquinas dent
 Cada nodo dentro del clúster realiza las operaciones de indexación para poder indexar todos los documentos que se añaden a Elasticsearch. Todos los nodos también participan en las operaciones de búsqueda y análisis. Cualquier búsqueda se ejecutará en varios nodos en paralelo.
 
 Cada nodo dentro del clúster tiene un identificador y nombre único. Estos datos son para referirnos a un nodo en las tareas de administración del clúster.
+
+##### Tipos de nodo
+
+En Elasticsearch hay 4 tipos de nodos:
+
+ - Nodos maestros se encargan de configurar y administrar el clustes de ES, como por ejemplo, para añadir nuevos nodos hay que hacerlo a través de los nodos maestros.
+ - Nodos de datos se encargan de almacenar documentos. Este tipo de nodos tiene sentido hacer réplicas.
+ - Nodos cliente sirven para comunicarnos con el nodo maestro o para recoger información.
+ - Nodos de ingesta se encargan de preprocesar los documentos antes de almacenarlos. Son poco frecuentes. Por ejemplo, si la indexación de documentos es un cuello de botella porque en un corto periodo de tiempo se tienen que indexar miles de documentos, entonces se puede crear un nodo de ingesta para que procese esta información.
 
 #### Clúster
 Un **cluster** es una colección de nodos que operan juntos para llevar a cabo un mismo objetivo. Un clúster de Elasticsearch puede escalar a cientos e incluso miles de nodos, o incluso un único nodo en el clúster. Cualquier índice que se cree para que los documentos sean susceptibles de ser buscados se guardan en el clúster. Todo clúster tiene un nombre único, que si no se especifica, por defecto es **elasticsearch**. 
@@ -133,21 +142,66 @@ Con los shards conseguimos también escalar en volumen y rendimiento buscando en
 
 #### Conclusión
 
-Un índice se puede separar en varios máquinas, y esos subconjuntos de índice se le llaman **shards**.
+Un índice se puede separar en varias máquinas, formando así subconjuntos de índice, y a estos subconjuntos de índice se le llaman **shards**.
 
 Un **shard** puede ser **replicado** cero o más veces. Podemos tener tantas réplicas como pensemos que vayamos a necesitar.
 
 Por defecto, Elasticsearch tiene 5 shards y 1 réplica. Así que, cada shard tiene un backup 
 
+### Monitorizando el clúster
 
+A continuación una serie de endpoints para comprobar el estado general de nuestro Elasticsearch
 
-## Tipos de nodo
+#### Información genérica
 
-En ES hay 4 tipos de nodos:
+Una vez arrancado el clúster de Elasticsearch, podemos consultar su estado haciendo una petición a 
+```http://localhost:9200```
 
- - Nodos maestros se encargan de configurar y administrar el clustes de ES, como por ejemplo, para añadir nuevos nodos hay que hacerlo a través de los nodos maestros.
- - Nodos de datos se encargan de almacenar documentos. Este tipo de nodos tiene sentido hacer réplicas.
- - Nodos cliente sirven para comunicarnos con el nodo maestro o para recoger información.
- - Nodos de ingesta se encargan de preprocesar los documentos antes de almacenarlos. Son poco frecuentes. Por ejemplo, si la indexación de documentos es un cuello de botella porque en un corto periodo de tiempo se tienen que indexar miles de documentos, entonces se puede crear un nodo de ingesta para que procese esta información.
+y nos saldrá una información parecida a esta:
+
+```
+{
+  "name": "my_first_node",
+  "cluster_name": "isma_es",
+  "cluster_uuid": "5F0T_vqoRvWtyGztDMjtGA",
+  "version": {
+    "number": "7.6.1",
+    "build_flavor": "default",
+    "build_type": "tar",
+    "build_hash": "aa751e09be0a5072e8570670309b1f12348f023b",
+    "build_date": "2020-02-29T00:15:25.529771Z",
+    "build_snapshot": false,
+    "lucene_version": "8.4.0",
+    "minimum_wire_compatibility_version": "6.8.0",
+    "minimum_index_compatibility_version": "6.0.0-beta1"
+  },
+  "tagline": "You Know, for Search"
+}
+```
+
+Nos presenta información básica como el nombre del nodo (name), el nombre del clúster (cluster_name), el identificador del clúster (cluster_uuid) y la versión de Elasticsearch (version.number).
+
+#### Información del estado del clúster, shards y réplicas
+
+```
+http://localhost:9200/_cat/health?v&pretty
+```
+
+La respuesta de este endpoint nos da la información del número de nodos disponibles (node.total), el número de nodos de datos (node.data), el estado del clúster (status).
+
+Si el **status** del clúster es **green** indica que todos los shards y réplicas del clúster están disponibles para hacerles peticiones. El clúster es totalmente funcional.
+
+Si el **status** del clúster es **yellow** indica que el clúster sigue siendo capaz de procesar peticiones pero puede que ciertas réplicas no estén disponibles.
+
+Si el **status** del clúster es **red** indica que algunos shards de algunos índices no están disponibles, ni tampoco sus réplicas. El clúster no es totalmente funcional y necesita ser arreglado para evitar que pierda información.
+
+#### Información de nodos
+
+```
+http://localhost:9200/_cat/nodes?v&pretty
+```
+
+Este endpoint nos indica los nodos que tenemos disponibles dentro del clúster. 
+
  
 
