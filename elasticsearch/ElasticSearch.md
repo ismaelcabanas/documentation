@@ -126,6 +126,7 @@ El índice en Elasticsearch se refiere a un conjunto de documentos similares. No
 Un **tipo de documento** es una colección de documentos con las mismas características dentro de un índice.
 
 #### Documentos
+
 Un **documento** es la unidad de información que necesita ser indexada. Solamente es un contenedor de texto que necesita ser buscado. Los documentos en Elasticsearch son expresados en JSON. Todos los documentos se encuentran en un índice. Un documento es asignado a un tipo y un índice. Con el tipo y el índice logramos identificar un conjunto de documentos. Un índice puede estar compuesto por una gran cantidad de documentos, y puede pasar que almacenar todos estos documentos ocupen una gran cantidad de espacio y no quepan físicamente en un disco de un solo nodo. 
 
 #### Shards o fragmentos
@@ -146,7 +147,11 @@ Un índice se puede separar en varias máquinas, formando así subconjuntos de �
 
 Un **shard** puede ser **replicado** cero o más veces. Podemos tener tantas réplicas como pensemos que vayamos a necesitar.
 
-Por defecto, Elasticsearch tiene 5 shards y 1 réplica. Así que, cada shard tiene un backup 
+Por defecto, Elasticsearch tiene 5 shards y 1 réplica. Así que, cada shard tiene un backup.
+
+Visión general de un clúster de Elasticsearch
+
+[](../images/cluster_es.png)
 
 ### Monitorizando el clúster
 
