@@ -151,7 +151,7 @@ Por defecto, Elasticsearch tiene 5 shards y 1 réplica. Así que, cada shard tie
 
 Visión general de un clúster de Elasticsearch
 
-![Elasticsearch clúster](../images/cluster_es.png)
+![Elasticsearch clúster](images/cluster_es.png)
 
 ### Monitorizando el clúster
 
