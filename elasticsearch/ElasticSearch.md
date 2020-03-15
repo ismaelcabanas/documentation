@@ -115,13 +115,18 @@ Un **cluster** es una colección de nodos que operan juntos para llevar a cabo u
 
 La forma que tenemos de escalar es añadir nuevos nodos al clúster especificando el nombre de éste a la hora de levantarlo. Los nodos dentro del clúster se encontrán a sí mismos dentro de Elasticsearch enviándose mensajes. Las máquinas que representan los nodos dentro del clúster deben estar en la misma red.
 
-#### Tipos de documentos
-Los **documentos** es la información que vamos a querer almacenar en Elasticsearch. Éstos pueden tener cualquier información dependiendo de nuestro modelo de negocio. Al final, los documentos en nuestro modelo se dividen en categorías o tipos formando una agrupación de documentos. 
+#### Tipos de documentos (deprecado a partir de la versión 6)
 
-Cada uno de estos tipos de documentos forman un **índice**, que es dónde se va a buscar. Por ejemplo, en un Site de Blogs, los artículos serían un tipo de documento, los comentarios sobre los artículos podrían ser otro tipo de documento. No es condición necesaria para Elasticsearch que un índice esté formado por un único tipo de documento, un índice puede estar formado por documentos de distintos tipos.
+Los **documentos** son la información que vamos a querer almacenar en Elasticsearch. Éstos pueden tener cualquier información dependiendo de nuestro modelo de negocio. Estos documentos los podemos indexar formando una agrupación lógica, por ejemplo, dentro de un mismo índice de productos, podríamos tener documentos de móviles, de portátiles, etc... y estos podríamos indexarlos de forma lógica como distintos tipos de documentos. 
+
+Cada uno de estos tipos de documentos forman parte de un **índice**, que es dónde se va a buscar. Por ejemplo, en un Site de Blogs, los artículos serían un tipo de documento, los comentarios sobre los artículos podrían ser otro tipo de documento. No es condición necesaria para Elasticsearch que un índice esté formado por un único tipo de documento, un índice puede estar formado por documentos de distintos tipos.
 
 #### Índice
-El índice en Elasticsearch se refiere a un conjunto de documentos similares. No necesitan ser exactamente del mismo tipo. Un índice se identifica únicamente en un clúster por su nombre, y se pueden tener cualquier número de índices dentro de un clúster. Lo normal es que los índices estén formados por documentos del mismo tipo porque luego se querrán hacer búsquedas sobre ellos. Los documentos con los mismos campos suelen pertenecer a un tipo. 
+
+El índice en Elasticsearch se refiere a un conjunto de documentos similares. No necesitan ser exactamente del mismo tipo. Por dar una analogía con el mundo de base de datos relaciones, un índice
+sería como una base de datos que puede contener distingos tipos de documentos (tablas en el mundo base de datos). Por lo tanto, podríamos tener un índice de catálogo de productos, otro de catálogo de usuarios, etc..., luego, Elasticsearch nos permitirá realizar búsquedas incluso entre varios índices.
+
+Un índice se identifica únicamente en un clúster por su nombre, y se pueden tener cualquier número de índices dentro de un clúster. Lo normal es que los índices estén formados por documentos del mismo tipo porque luego se querrán hacer búsquedas sobre ellos. Los documentos con los mismos campos suelen pertenecer a un tipo. 
 
 Un **tipo de documento** es una colección de documentos con las mismas características dentro de un índice.
 
@@ -152,6 +157,10 @@ Por defecto, Elasticsearch tiene 5 shards y 1 réplica. Así que, cada shard tie
 Visión general de un clúster de Elasticsearch
 
 ![Elasticsearch clúster](images/cluster_es.png)
+
+Visión general de cómo se gestionan los índices en los nodos
+
+![Elasticsearch índice](images/indice.png)
 
 ### Monitorizando el clúster
 
@@ -208,5 +217,446 @@ http://localhost:9200/_cat/nodes?v&pretty
 
 Este endpoint nos indica los nodos que tenemos disponibles dentro del clúster. 
 
- 
+## Usando el API de Elasticsearch
+
+Elasticsearch tiene una potente RESTful API para hacer todo tipo de operaciones sobre Elasticsearch.
+
+### Crear índices
+
+Para crear un índice, por ejemplo *candidates*, para tener un catálogo de los candidatos de nuestros clientes
+
+```
+PUT http://localhost:9200/candidates?&pretty
+```
+
+El nombre **candidates** será el nombre del índice que queremos crear.
+
+### Listar los índices
+
+Para ver los índices de nuestro Elasticsearch
+
+```
+GET http://localhost:9200/_cat/indices?v&pretty
+```
+
+Un ejemplo de la respuesta sería
+
+```
+health status index      uuid                   pri rep docs.count docs.deleted store.size pri.store.size
+yellow open   candidates f2pcFbuuQe-6QFO60RcsSw   1   1          0            0       283b           283b
+```
+
+Cuando creamos un índice, Elasticsearch asigna automáticamente un UUID, indicado por el campo **uuid**, al índice. Por defecto, en la versión 7.6.1, cuando se crea un índice se asigna 1 shard, indicado por el campo **pri**, y 1 réplica, indicado por el campo **rep**. En versiones anteriores, por defecto, se asignaba a 5 shards y 1 réplica.
+
+El número de documentos del índice viene indicado por el campo **docs.count**.
+
+El tamaño que ocupa el índice viene indicado por el campo **store.size**.
+
+Cuando se crea el índice, se puede ver que el campo **health** está a **yellow**, esto es porque es un clúster de un solo nodo, y al no haber otro nodo donde hacer la réplica del nodo, el nodo mismo guarda la réplica, pero sería un problema si este nodo lo perdiésemos por algún motivo
+
+### Añadir documentos al índice
+
+Para añadir un documento a un índice hacemos una petición PUT con un request body con el contenido del documento
+
+```
+PUT http://localhost:9200/cvs/candidates/c388034b-98e7-4e30-af59-be3c7fde36af?pretty
+
+{
+	"name": "Ismael",
+	"surname": "Cabañas Garcia"
+}
+```
+
+La respuesta que recibimos es algo como esto
+
+```
+{
+  "_index": "cvs",
+  "_type": "candidates",
+  "_id": "c388034b-98e7-4e30-af59-be3c7fde36af",
+  "_version": 1,
+  "result": "created",
+  "_shards": {
+    "total": 2,
+    "successful": 1,
+    "failed": 0
+  },
+  "_seq_no": 0,
+  "_primary_term": 1
+}
+```
+
+La respuesta nos indica que se ha creado un documento en el índice **cvs** del tipo **candidates** con el identificador **c388034b-98e7-4e30-af59-be3c7fde36af**. El campo **version** indica el número de veces que el documento se ha actualizado (cuando es creado por primera vez el valor es 1). El campo **result** indica la operación que se ha llevado a cabo, en este caso **created**. 
+
+### Recuperar documentos por id
+
+```
+GET http://localhost:9200/cvs/candidates/c388034b-98e7-4e30-af59-be3c7fde36af?pretty
+``` 
+
+La respuesta será parecida a esta
+
+```
+{
+  "_index": "cvs",
+  "_type": "candidates",
+  "_id": "c388034b-98e7-4e30-af59-be3c7fde36af",
+  "_version": 1,
+  "_seq_no": 0,
+  "_primary_term": 1,
+  "found": true,
+  "_source": {
+    "name": "Ismael",
+    "surname": "Cabañas Garcia"
+  }
+}
+```
+
+Lo destacable de esta respuesta es que el contenido del documento se encuentra en el campo **_source**. Si el contenido del documento es muy grande, éste campo será a su vez muy grande y afectará al rendimiento de la respuesta pues es información que se tiene que enviar al cliente.
+
+El campo **found** nos indica si encontró el documento en el índice, en este caso es *true* pero si no lo encontrase devolvería *false* y el campo *_source* no vendría en la respuesta.
+
+Si no estuviésemos interesados en el contenido del documento, podemos añadir el parámetro **_source=false** a la petición.
+
+```
+GET http://localhost:9200/cvs/candidates/c388034b-98e7-4e30-af59-be3c7fde36af?pretty&_source=false
+``` 
+
+Si sólo nos interesan ciertos campos del contenido, podemos añadir el parámetro **_source=field1, ..., fieldN**
+
+```
+GET http://localhost:9200/cvs/candidates/c388034b-98e7-4e30-af59-be3c7fde36af?pretty&_source=name
+``` 
+
+### Información del índice
+
+Una vez tenemos documentos en nuestro índice, una información interesante es consultar el endpoint
+
+```
+http://localhost:9200/candidates
+```
+
+La respuesta nos da mucha meta-información del índice, como por ejemplo los tipos que ha asignado Elasticsearch a cada uno de los campos de los documentos.
+
+
+### Actualización de documentos
+
+Cuando queremos actualizar el contenido de un documento, éste necesita ser reindexado o actualizado. Se puede actualizar todo el contenido del documento o hacer una actualización parcial. 
+
+El endpoint para realizar una **actualización total** de un documento es similar al endpoint para crear un documento, solo que cambiamos el contenido
+
+```
+PUT http://localhost:9200/cvs/candidates/c388034b-98e7-4e30-af59-be3c7fde36af?pretty
+
+{
+	"name": "Ismael",
+	"surname": "Bernardino Garcia"
+}
+```
+
+La respuesta también es similar a la respuesta obtenida cuando creabamos un documento
+
+```
+{
+  "_index": "candidates",
+  "_type": "cvs",
+  "_id": "f26bea19-120c-4f50-be95-c6e3acd15cb7",
+  "_version": 2,
+  "result": "updated",
+  "_shards": {
+    "total": 2,
+    "successful": 1,
+    "failed": 0
+  },
+  "_seq_no": 4,
+  "_primary_term": 1
+}
+```
+
+Pero la diferencia viene en los campos **version** y **result**. El campo **version** vemos que aumenta en 1, indicando que hay una nueva versión del documento, el campo **result** indica que es una actualización.
+
+Para realizar una **actualización parcial** de un documento debemos realizar una petición más concreta, debe ser con el método POST, el path **_update** y en el body de la petición un campo **doc**. Veamos un ejemplo en el que queremos añadir un nuevo campo a un documento, la petición para realizar esto sería algo como esto
+
+```
+POST http://localhost:9200/candidates/cvs/f26bea19-120c-4f50-be95-c6e3acd15cb7/_update?pretty
+
+{
+	"doc": {
+		"age": 44 
+	}
+}
+```
+
+Y la respuesta obtenida
+
+```
+{
+  "_index": "candidates",
+  "_type": "cvs",
+  "_id": "f26bea19-120c-4f50-be95-c6e3acd15cb7",
+  "_version": 3,
+  "result": "updated",
+  "_shards": {
+    "total": 2,
+    "successful": 1,
+    "failed": 0
+  },
+  "_seq_no": 5,
+  "_primary_term": 1
+}
+```
+
+Y vemos que se ha incrementado el campo **version** y el campo **result** indica que es una actualización. Y si consultamos el documento, veremos que aparece el nuevo campo **age** en el documento, pero los otros documentos del mismo tipo no tendrán tal campo.
+
+También podemos usar este mismo endpoint para actualizar campos existentes
+
+```
+POST http://localhost:9200/candidates/cvs/f26bea19-120c-4f50-be95-c6e3acd15cb7/_update?pretty
+
+{
+	"doc": {
+		"name": "Ismael"
+	}
+}
+```
+
+Si realizamos una actualización parcial sin se produzca ningún cambio en el documento, la respuesta que recibiremos será parecida a 
+
+```
+{
+  "_index": "candidates",
+  "_type": "cvs",
+  "_id": "f26bea19-120c-4f50-be95-c6e3acd15cb7",
+  "_version": 4,
+  "result": "noop",
+  "_shards": {
+    "total": 0,
+    "successful": 0,
+    "failed": 0
+  },
+  "_seq_no": 6,
+  "_primary_term": 1
+}
+```
+
+El campo **result** indicará el valor **noop**, y el valor del campo **version** no cambiará.
+
+El API Rest de Elasticsearch nos permite hacer actualizaciones parciales en base a un **script**
+
+```
+POST http://localhost:9200/candidates/cvs/f26bea19-120c-4f50-be95-c6e3acd15cb7/_update?pretty
+
+{
+	"script": "ctx._source.age += 2"
+}
+```
+
+### Borrado de documentos
+
+#### Borrado de un documento en el índice
+
+Después de haber creado un documento en un índice, si quisiéramos eliminarlo deberíamos hacer una petición DELETE del documento
+
+```
+DELETE http://localhost:9200/candidates/cvs/724f918a-b1d3-4e5e-b024-f424a3cbee5d?pretty
+```
+
+La respuesta obtenida sería parecida a 
+
+```
+{
+  "_index": "candidates",
+  "_type": "cvs",
+  "_id": "724f918a-b1d3-4e5e-b024-f424a3cbee5d",
+  "_version": 2,
+  "result": "deleted",
+  "_shards": {
+    "total": 2,
+    "successful": 1,
+    "failed": 0
+  },
+  "_seq_no": 9,
+  "_primary_term": 1
+}
+```
+
+Indicando en el campo **result** que la operación realizada fue borrado de un documento.
+
+Si intentamos eliminar un documento que no existe dentro del índice, obtendríamos una respuesta parecida a 
+
+```
+{
+  "_index": "candidates",
+  "_type": "cvs",
+  "_id": "724f918a-b1d3-4e5e-b024-f424a3cbee5d",
+  "_version": 2,
+  "result": "deleted",
+  "_shards": {
+    "total": 2,
+    "successful": 1,
+    "failed": 0
+  },
+  "_seq_no": 9,
+  "_primary_term": 1
+}
+```
+
+Indicando en el campo **result** el valor **not_found**.
+
+#### Existencia de un documento
+
+Una alternativa para comprobar si un documento existe o no dentro de un índice sería realizar una peteción HEAD del documento, por ejemplo
+
+```
+HEAD http://localhost:9200/candidates/cvs/724f918a-b1d3-4e5e-b024-f424a3cbee5d?pretty
+```
+
+Si el documento no existe el código de estado de la respuesta será un **404**, en cambio, si existe el código de estado de la respuesta será un **200**.
+
+Hay que tener en cuenta que cuando borramos un documento de Elasticsearch éste **no se elimina del índice inmediatamente** sino que se marca como borrado lógico, y más tarde, cuando se producen los procesos de sincronización de Elasticsearch para consolidar espacio en disco, es cuando el borrado tiene lugar. 
+
+#### Borrado de un índice
+
+Podemos borrar todos los documentos de un índice borrando el índice completo.
+
+Si intentamos eliminar un índice que no existe
+
+```
+DELETE http://localhost:9200/cvss?pretty
+```
+
+Obtendremos una respuesta de error indicando que el índice no se encontró: 
+
+```
+{
+  "error": {
+    "root_cause": [
+      {
+        "type": "index_not_found_exception",
+        "reason": "no such index [cvss]",
+        "resource.type": "index_or_alias",
+        "resource.id": "cvss",
+        "index_uuid": "_na_",
+        "index": "cvss"
+      }
+    ],
+    "type": "index_not_found_exception",
+    "reason": "no such index [cvss]",
+    "resource.type": "index_or_alias",
+    "resource.id": "cvss",
+    "index_uuid": "_na_",
+    "index": "cvss"
+  },
+  "status": 404
+}
+```
+
+En cambio, si borramos un índice existente recibiremos una respuesta
+
+```
+{
+  "acknowledged": true
+}
+```
+
+Y si listásemos los índices del clúster, veríamos que el eliminado ya no se encontraría entre ellos.
+
+### Operaciones Bulk
+
+Elasticsearch no nos permite hacer operaciónes bulk de edición de documentos, pero sí nos permite obtener documentos y ejecutar varias acciones en una petición.
+
+#### _mget
+
+Podemos obtener varios documentos con el path **_mget**, por ejemplo
+
+```
+GET http://localhost:9200/_mget?pretty
+
+{
+	"docs": [
+		{
+			"_index": "candidates",
+			"_type": "cvs",
+			"_id": "5592c48f-08c4-44eb-aac6-cbbeeedf97d9"
+		},
+		{
+			"_index": "candidates",
+			"_type": "cvs",
+			"_id": "2ee7b73d-0605-4441-8ece-aae108ee2cc6"
+		}
+	]
+}
+```
+
+En el cuerpo de la petición, podemos ver que indicamos el índice, el tipo de documento, y el identifcador del documento que queremos recuperar.
+
+Y la respuesta que obtendríamos sería
+
+```
+{
+  "docs": [
+    {
+      "_index": "candidates",
+      "_type": "cvs",
+      "_id": "5592c48f-08c4-44eb-aac6-cbbeeedf97d9",
+      "_version": 2,
+      "_seq_no": 3,
+      "_primary_term": 1,
+      "found": true,
+      "_source": {
+        "name": "Beatríz",
+        "surname": "Bernardino Nuño"
+      }
+    },
+    {
+      "_index": "candidates",
+      "_type": "cvs",
+      "_id": "2ee7b73d-0605-4441-8ece-aae108ee2cc6",
+      "_version": 1,
+      "_seq_no": 0,
+      "_primary_term": 1,
+      "found": true,
+      "_source": {
+        "name": "Saúl",
+        "surname": "Cabañas Bernardino"
+      }
+    }
+  ]
+}
+```
+
+Un campo **docs** con un array de los documentos encontrados.
+
+La misma respuesta obtendríamos si en lugar de especificar el índice en el cuerpo de la petición lo hiciésemos en el path de la petición, por ejemplo
+
+```
+GET http://localhost:9200/candidates/_mget?pretty
+```
+
+La misma respuesta obtendríamos si en lugar de especificar el tipo de documento en el cuerpo de la petición lo hiciésemos en el path de la petición, por ejemplo
+
+```
+GET http://localhost:9200/candidates/cvs/_mget?pretty
+```
+
+#### _bulk
+
+Podemos ejecutar varias acciones en un petición con el path **_bulk**. Mejor ver la documentación de Elasticsearch si necesitamos un caso de uso de este estilo. 
+
+Básicamente, podemos hacer operaciones de crear, borrar, o actualizar documentos en una sola petición a Elasticsearch, y el API nos respondería individualmente por cada acción.
+
+### Operaciones bulk sobre el índice
+
+Podemos hacer operaciones bulk sobre un índice, como por ejemplo indexar documentos a partir de un fichero JSON. Éste JSON debe tener un formato específico, un ejemplo sería:
+
+```
+{"index": {"_index": "candidates", "_type": "cvs", "_id": "uuid"}}
+{"name": "Ismael", "surname": "Cabañas García"}
+...
+{"index": {"_index": "candidates", "_type": "cvs", "_id": "uuid"}}
+{"name": "Ismael", "surname": "Cabañas García"}
+```
+
+Mejor ver también la documentación oficial de Elasticsearch si tuviésemos que realizar un caso de uso similar.
+
 
