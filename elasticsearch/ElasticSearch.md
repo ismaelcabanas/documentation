@@ -32,7 +32,7 @@ Hay varias tecnologías especializadas en cada uno de estos pasos. Por ejemplo, 
 
 ### El índice invertido
 
-Antes de avanzar, vamos a intentar entender el índice invertido, la estructura de datos del corazón de cualquier algoritmo de búsqueda. 
+Antes de avanzar, vamos a intentar entender el índice invertido, la estructura de datos core de cualquier algoritmo de búsqueda. 
 
 El primer paso es conocer la existencia de los documentos para ser indexados y posteriormente buscados. El contenido de los documentos es parseado y dividido en palabras individuales normalizadas en minúsculas, para que todas las palabras puedan compararse en minúsculas, y se elimina cualquier signo de puntuación en las palabras.
 
@@ -84,7 +84,12 @@ Con esto arrancamos un nodo de Elasticsearch corriendo en local en un clúster q
 
 ```[AFE0811358.home] initialized```
 
-Podemos arrancar otros nodos al mismo clúster con la misma instrucción indicando el nombre del clúster.
+Podemos arrancar otros nodos al mismo clúster con la misma instrucción indicando el nombre del clúster. Por ejemplo
+
+```
+./elasticsearch -Epath.data=data2 -Epath.logs=log2
+./elasticsearch -Epath.data=data3 -Epath.logs=log3
+```
 
 Si queremos dar un nombre específico al clúster y al nodo, podemos hacerlo de la siguiente manera
 
@@ -659,4 +664,1155 @@ Podemos hacer operaciones bulk sobre un índice, como por ejemplo indexar docume
 
 Mejor ver también la documentación oficial de Elasticsearch si tuviésemos que realizar un caso de uso similar.
 
+## Peticiones de búsqueda utilizando el Elasticsearch Query DSL
 
+Como vimos anteriormente, el objetivo de una búsqueda es encontrar los documentos más relevantes basados en los términos de búsqueda.
+
+DSL es un lenguaje específico del dominio. Query DSL es un lenguaje de búsqueda que nos permite expresar consultas complejas. Se conecta con el motor de búsqueda de Lucene a través de JSON.
+
+Las búsquedas en Elasticsearch operan bajo dos contextos completamente diferentes, que intentan responder a distintos problemas de búsqueda:
+ - Cómo de bien se ajusta este documento a esta consulta?
+ - Éste documento se ajusta a esta cláusula de consulta?
+
+La primera de ellas no es una respuesta de sí o no, sino que para saber cómo de bien se ajusta un documento a una query, se necesita una puntuación para cada documento. Mientras que la segunda pregunta basta con dar una respuesta de sí o no.
+
+La primera pregunta se ejecuta en el contexto **Query Context**, y la segunda se ejecuta en el contexto de **Filter Context**.
+
+### Query Context
+
+En este contexto, lo primero es saber si el documento se incluye o no en el resultado de la consulta. 
+
+Lo segundo es calcular la relevancia del documento: para cada término de búsqueda se asocia una puntuación con el documento, que es parte del resultado de la búsqueda. 
+
+Por último, cuanto más puntuación tiene un documento más alto será mostrado en el ranking de búsquedas. Cuanto más puntuación, más relevancia tiene el documento. El usuario siempre quiere ver primero los documentos más relevantes. 
+
+### Filter Context
+
+Este contexto opera de forma diferente al Query Context. Lo primero es saber si el documento se incluye o no en el resultado de la consulta. Este paso es exactamente el mismo que para el **Query  Context**. 
+
+Pero, en este contexto, no existe el concepto de puntuación individual de cada documento.
+
+Este contexto se suele usar cuando se quiere filtrar datos desestructurados, coincidencias exactas, rangos de consultas (date greater than ....)
+
+Este tipo de consultas tienen un rendimiento mucho mejor que las consultas realizadas con **Query Contesxt**. El **Filter Context** sólo necesita saber si el documento ha sido o no incluído en el resultado de la búsqueda, no es necesario calcular ninguna puntuación asociada al documento. Por lo tanto, es el método más eficiente.
+
+### Generando un juego de datos
+
+Para probar realizar consultas con Elasticsearch primero vamos a generar un conjunto de datos para incluirlos en Elasticsearch. En (json-generator)[https://www.json-generator.com/] tenemos una utilidad que nos puede generar un juego de datos a partir de una plantilla, como esta:
+
+```
+[
+  '{{repeat(1000, 1000)}}',
+  {
+    id: '{{guid()}}',
+    name: '{{surname()}}, {{firstName()}}',
+    lastPosition: '{{lorem(1, "words")}}',
+    birthDate: '{{date(new Date(1970, 0, 1), new Date(2002,0,1), "YYYY-MM-ddThh:mm:ss Z")}}',
+    lastUpdated: '{{date(new Date(1970, 0, 1), new Date(), "YYYY-MM-ddThh:mm:ss Z")}}',
+    processes: '{{integer(0, 4)}}',
+    province: '{{city()}}',
+    town: '{{state()}}',
+    tags: [
+      '{{repeat(0,5)}}',
+      {
+        id: '{{guid()}}',
+        ownerId: '{{integer(1,999}}',
+        description: '{{lorem()}}'
+      }
+    ],
+    attachments: [
+      '{{repeat(0,3)}}',
+      {
+        id: '{{guid()}}',
+        ownerId: '{{integer(1,999}}',
+        description: '{{lorem(1, "words")}}'
+      }
+    ]    
+  }
+]
+```
+
+### Consultas usando parámetros en la petición
+
+Este tipo de consultas son las que vimos anteriormente, **Query Context**. En este tipo de búsquedas los documentos tienen una puntuación de relevancia que indica cómo de bien el documento coincide con el término de la búsqueda. 
+
+El término de búsqueda en Elasticsearch se puede especificar de dos maneras dentro de la URL:
+ 1.- con parámetros en la petición
+ 2.- en el body de la petición
+
+En esta sección veremos cómo usar parámetros en la petición.
+
+#### Consultas por término
+
+Las peticiones de búsqueda se hacen con una petición REST que hace la petición al search API especificado por el path **_search** en la petición. Por ejemplo
+
+```
+GET http://localhost:9200/cvs/_search?q=wyoming&pretty
+```
+
+Esta consulta es muy simple. Con esta consulta buscamos el término **wyoming** dentro del índice **cvs** en cualquier parte del documento. Elasticsearh busca en el contenido de todos los documentos el término en cualquier campo dentro de cada documento.
+
+Un ejemplo del resultado devuelto por Elasticsearch es
+
+```
+{
+  "took": 150,
+  "timed_out": false,
+  "_shards": {
+    "total": 1,
+    "successful": 1,
+    "skipped": 0,
+    "failed": 0
+  },
+  "hits": {
+    "total": {
+      "value": 9,
+      "relation": "eq"
+    },
+    "max_score": 5.9062696,
+    "hits": [
+      {
+        "_index": "cvs",
+        "_type": "_doc",
+        "_id": "Ge8K_nAB7f74Y7A0HRFb",
+        "_score": 5.9062696,
+        "_source": {
+          "id": "c3ed7419-6401-46ef-b18c-756cc66b8e93",
+          "name": "Hickman, Bonnie",
+          "lastPosition": "ullamco",
+          "birthDate": "01-07-1978",
+          "lastUpdated": "01-04-1998",
+          "processes": 0,
+          "province": "Wyoming",
+          "town": "Virginia",
+          "tags": [
+            {
+              "id": "63cf89f4-0d33-4f81-9bff-7db12ee3b74b",
+              "ownerId": 697,
+              "description": "Labore anim aliquip reprehenderit ipsum et fugiat reprehenderit."
+            },
+            {
+              "id": "9ba37249-eb91-463b-9888-35a4c813e62d",
+              "ownerId": 123,
+              "description": "Mollit qui laboris excepteur et duis quis pariatur velit sit exercitation et minim id laborum."
+            },
+            {
+              "id": "30a1c51a-2b00-475c-b2e4-03312d7ef47c",
+              "ownerId": 829,
+              "description": "Dolor fugiat in incididunt culpa ex do fugiat incididunt commodo pariatur."
+            },
+            {
+              "id": "fa539c7c-5d37-4593-bf62-6facaee67b7a",
+              "ownerId": 80,
+              "description": "Adipisicing veniam qui duis elit est ex Lorem anim eiusmod nisi."
+            }
+          ],
+          "attachments": [
+            {
+              "id": "088b4481-9793-47f2-b174-303139a26a56",
+              "ownerId": 516,
+              "description": "enim"
+            },
+            {
+              "id": "7eb6ed28-6c66-4bc7-9144-8d996cf51b19",
+              "ownerId": 875,
+              "description": "veniam"
+            },
+            {
+              "id": "451c5c79-5c63-4205-b42c-c514c0450e97",
+              "ownerId": 893,
+              "description": "irure"
+            }
+          ]
+        }
+      },
+      {
+        "_index": "cvs",
+        "_type": "_doc",
+        "_id": "z-8K_nAB7f74Y7A0HQ9Z",
+        "_score": 4.6676774,
+        "_source": {
+          "id": "8b33b44d-5f7c-4078-a925-0248c2882a15",
+          "name": "Calderon, Oneill",
+          "lastPosition": "laboris",
+          "birthDate": "28-05-2001",
+          "lastUpdated": "09-08-2009",
+          "processes": 0,
+          "province": "Newkirk",
+          "town": "Wyoming",
+          "tags": [],
+          "attachments": []
+        }
+      },
+      {
+        "_index": "cvs",
+        "_type": "_doc",
+        "_id": "_u8K_nAB7f74Y7A0HQ9a",
+        "_score": 4.6676774,
+        "_source": {
+          "id": "2473ff01-1899-4f7e-9e34-5c1a1459de0a",
+          "name": "Meyers, Rogers",
+          "lastPosition": "sint",
+          "birthDate": "27-11-1971",
+          "lastUpdated": "28-11-1984",
+          "processes": 3,
+          "province": "Marne",
+          "town": "Wyoming",
+          "tags": [
+            {
+              "id": "edbeb768-789b-4e30-b5bc-0481d9c62154",
+              "ownerId": 98,
+              "description": "Quis amet ad eiusmod elit qui cillum reprehenderit aliqua."
+            },
+            {
+              "id": "e108d39d-da50-4beb-ade2-99e73f7aa24c",
+              "ownerId": 645,
+              "description": "Do dolor ut voluptate officia."
+            },
+            {
+              "id": "cfa86865-a884-4fdd-860f-ee92c1a87f64",
+              "ownerId": 120,
+              "description": "Laborum excepteur dolor ullamco nostrud."
+            }
+          ],
+          "attachments": []
+        }
+      },
+      {
+        "_index": "cvs",
+        "_type": "_doc",
+        "_id": "OO8K_nAB7f74Y7A0HRBa",
+        "_score": 4.6676774,
+        "_source": {
+          "id": "9aadcc36-131d-459f-a897-27c5cfa10144",
+          "name": "Foster, Ellis",
+          "lastPosition": "occaecat",
+          "birthDate": "27-06-1982",
+          "lastUpdated": "05-08-1997",
+          "processes": 4,
+          "province": "Convent",
+          "town": "Wyoming",
+          "tags": [
+            {
+              "id": "bb442251-d8ea-4404-af38-6babc0cd0d41",
+              "ownerId": 629,
+              "description": "Magna et occaecat irure eu amet labore nulla sint aliquip duis duis ad deserunt."
+            }
+          ],
+          "attachments": [
+            {
+              "id": "a2d9f458-4bfb-49a1-a7cb-7a2718b85cf4",
+              "ownerId": 957,
+              "description": "reprehenderit"
+            },
+            {
+              "id": "4e098e25-3d08-4f93-bdf8-97f27934cde1",
+              "ownerId": 845,
+              "description": "ad"
+            },
+            {
+              "id": "5281df46-69e0-4977-9b11-0966dc85af12",
+              "ownerId": 295,
+              "description": "nulla"
+            }
+          ]
+        }
+      },
+      {
+        "_index": "cvs",
+        "_type": "_doc",
+        "_id": "yu8K_nAB7f74Y7A0HRBa",
+        "_score": 4.6676774,
+        "_source": {
+          "id": "5f1fd2b3-a16d-40c4-a817-77ddc6d9caf2",
+          "name": "Ferrell, Rodriguez",
+          "lastPosition": "do",
+          "birthDate": "06-10-1995",
+          "lastUpdated": "30-10-1972",
+          "processes": 2,
+          "province": "Veyo",
+          "town": "Wyoming",
+          "tags": [
+            {
+              "id": "f512d0db-af88-415f-9f53-5e6da867abaa",
+              "ownerId": 324,
+              "description": "Sint id culpa consectetur ipsum sunt."
+            },
+            {
+              "id": "c43962ab-fa83-4c55-9405-3568cde18364",
+              "ownerId": 709,
+              "description": "Sint quis excepteur dolore consequat amet occaecat minim amet dolor elit."
+            },
+            {
+              "id": "fc5e9623-3056-4667-bae2-f49752ed5ce3",
+              "ownerId": 361,
+              "description": "Consectetur enim voluptate quis occaecat culpa."
+            },
+            {
+              "id": "d33c5ce3-5c60-4ac5-bf87-70cfdc3654cc",
+              "ownerId": 770,
+              "description": "Incididunt aliquip elit quis dolore ipsum aliquip occaecat exercitation magna incididunt non mollit."
+            },
+            {
+              "id": "51593b2e-f2ad-47e7-9797-62f3c174dc92",
+              "ownerId": 39,
+              "description": "Irure dolor mollit proident commodo duis ut deserunt et consectetur."
+            }
+          ],
+          "attachments": [
+            {
+              "id": "6a8711cd-44c6-4637-89c8-667ade030a8f",
+              "ownerId": 364,
+              "description": "culpa"
+            },
+            {
+              "id": "1f68e5a9-710d-49f1-805b-62d65ccdce7c",
+              "ownerId": 789,
+              "description": "occaecat"
+            },
+            {
+              "id": "ff623df6-b5cc-4639-a956-d8facddc5751",
+              "ownerId": 614,
+              "description": "ut"
+            }
+          ]
+        }
+      },
+      {
+        "_index": "cvs",
+        "_type": "_doc",
+        "_id": "BO8K_nAB7f74Y7A0HRFa",
+        "_score": 4.6676774,
+        "_source": {
+          "id": "409c48f5-fa2a-44ba-9111-1ae2667e26c6",
+          "name": "Fletcher, Sara",
+          "lastPosition": "voluptate",
+          "birthDate": "08-05-1972",
+          "lastUpdated": "05-03-2015",
+          "processes": 3,
+          "province": "Riverton",
+          "town": "Wyoming",
+          "tags": [
+            {
+              "id": "199c53b3-1130-454c-8114-924ac004c9b6",
+              "ownerId": 664,
+              "description": "Aliqua esse commodo enim duis est dolore cillum deserunt sunt Lorem."
+            }
+          ],
+          "attachments": [
+            {
+              "id": "2635faa8-f2ae-4ce2-8913-eeea17affa12",
+              "ownerId": 994,
+              "description": "eu"
+            },
+            {
+              "id": "c1c157e8-f5c6-4345-92c3-5283ab484a06",
+              "ownerId": 987,
+              "description": "eiusmod"
+            },
+            {
+              "id": "57e69c68-70ed-4079-9995-bc4cd252679a",
+              "ownerId": 759,
+              "description": "irure"
+            }
+          ]
+        }
+      },
+      {
+        "_index": "cvs",
+        "_type": "_doc",
+        "_id": "O-8K_nAB7f74Y7A0HRFb",
+        "_score": 4.6676774,
+        "_source": {
+          "id": "6eef7466-6cb8-4a43-9199-08bb68660584",
+          "name": "Rush, Francine",
+          "lastPosition": "laborum",
+          "birthDate": "09-10-1999",
+          "lastUpdated": "21-04-1972",
+          "processes": 4,
+          "province": "Tonopah",
+          "town": "Wyoming",
+          "tags": [
+            {
+              "id": "1228e7ab-3531-451a-a87b-fdcb72f21176",
+              "ownerId": 421,
+              "description": "Consequat ad laborum in enim do culpa aliquip do commodo nulla."
+            },
+            {
+              "id": "bf906540-6004-44e1-9a0f-74738737625e",
+              "ownerId": 277,
+              "description": "Sint aliquip in nostrud magna consequat pariatur esse reprehenderit velit."
+            },
+            {
+              "id": "edb63272-67ab-4ef4-9aeb-de72b3642c1f",
+              "ownerId": 676,
+              "description": "Adipisicing commodo do eiusmod non commodo pariatur labore laboris dolor in anim voluptate."
+            }
+          ],
+          "attachments": []
+        }
+      },
+      {
+        "_index": "cvs",
+        "_type": "_doc",
+        "_id": "de8K_nAB7f74Y7A0HRFb",
+        "_score": 4.6676774,
+        "_source": {
+          "id": "65d6b569-6570-4e06-892d-c3d0ed2df7e9",
+          "name": "Mason, Willa",
+          "lastPosition": "est",
+          "birthDate": "01-07-1995",
+          "lastUpdated": "21-04-1976",
+          "processes": 1,
+          "province": "Bloomington",
+          "town": "Wyoming",
+          "tags": [
+            {
+              "id": "0f86d83f-5071-4dc8-89fa-fdfc978d2292",
+              "ownerId": 479,
+              "description": "Excepteur aliqua ex eu ex fugiat est."
+            },
+            {
+              "id": "fa4bd0f6-e613-4668-91a9-82ab16543201",
+              "ownerId": 358,
+              "description": "Commodo eu aliqua in aute id occaecat excepteur est ea excepteur ullamco ad enim."
+            },
+            {
+              "id": "58b1524d-e8e7-4721-a358-540e0e464d97",
+              "ownerId": 867,
+              "description": "Veniam excepteur ad duis reprehenderit et id deserunt occaecat cillum irure sint."
+            },
+            {
+              "id": "97ad7ca6-093b-4d5d-ac6f-4a33f7543c4d",
+              "ownerId": 793,
+              "description": "Velit aliquip et velit adipisicing laborum incididunt culpa eu qui laboris minim irure culpa."
+            },
+            {
+              "id": "51ccbccc-0431-4afd-9ec9-f98213c1a861",
+              "ownerId": 469,
+              "description": "Qui et pariatur ut nostrud sint adipisicing cillum ea commodo non do do est consequat."
+            }
+          ],
+          "attachments": []
+        }
+      },
+      {
+        "_index": "cvs",
+        "_type": "_doc",
+        "_id": "r-8K_nAB7f74Y7A0HRFb",
+        "_score": 4.6676774,
+        "_source": {
+          "id": "6033c887-ae8d-48c4-b291-d8d68f11f577",
+          "name": "Carter, Margaret",
+          "lastPosition": "proident",
+          "birthDate": "28-11-1977",
+          "lastUpdated": "29-03-2004",
+          "processes": 2,
+          "province": "Otranto",
+          "town": "Wyoming",
+          "tags": [
+            {
+              "id": "3115d855-fbe8-44e7-93af-9e08ab4cce10",
+              "ownerId": 477,
+              "description": "Sunt laboris proident officia minim commodo proident."
+            },
+            {
+              "id": "91a9bb51-1b71-4307-9775-aab03647648c",
+              "ownerId": 1,
+              "description": "Sint cupidatat do occaecat id irure anim ad nostrud ex incididunt laboris cupidatat ipsum."
+            }
+          ],
+          "attachments": []
+        }
+      }
+    ]
+  }
+}
+```
+
+En el resultado se devuelve cierta metainformación como
+ - **took** indica los milisegundos que Elasticsearch tardó en realizar la búsqueda.
+ - **_shards** indica el número de shards donde se realizó la búsqueda.
+ - **hits** cotiene el resultado de la búsqueda. Además, indica el número total de documentos que fueron encontrados, especificado por el campo **total**. El campo **max_score** indica la máxima puntuación relevante entre los documentos resultantes. El campo **hits** contiene un array de los documentos encontrados. Cada elemento del array tiene cierta información como:
+    - **_index** indica el índice donde se encuentra el documento
+    - **_type** indica el tipo del documento
+    - **_score** indica la puntuación de relevancia respecto al término especificado en la búsqueda
+    - **_source** contiene el contenido del documento.
+
+Por defecto, Elasticsearch devuelve sólo 10 registros del total de la búsqueda, aunque este valor puede ser modificado añadiendo el parámetro **size** como parámetro en la petición.
+
+#### Consulta ordenadas
+
+Podemos ordenar los resultados de las búsqueda estableciendo el campo **sort** como un parámetro de la búsqueda. Por ejemplo
+
+```
+GET http://localhost:9200/cvs/_search?q=wyoming&sort=processes:desc&pretty
+```
+
+Tenemos que tener en cuenta que, cuando realizamos una ordenación de los resultados, el campo **max_score** es null, ya que al aplicar ordenación, la relavancia del documento ya no importa.
+
+Por el momento, el campo de ordenación debe ser un entero.
+
+La sintáxis para realizar una ordenación es **sort=docuemnt_field:(asc|desc)**.
+
+#### Consulta sobre un campo del documento
+
+Podemos realizar búsquedas sobre un campo determinado de un documento. Por ejemplo
+
+```
+GET http://localhost:9200/cvs/_search?q=province:Gloucester&pretty
+```
+
+Esta consulta obtendría aquellos documentos que tengan el valor Gloucester en el campo province. La sintáxis sería **q=document_field:value**.
+
+### Consultas usando el request body de la petición
+
+Ésta es la opción más usada para hacer consultas. Por ejemplo, para obtener todos los documentos de un índice
+
+```
+GET http://localhost:9200/cvs/_search?pretty
+
+{
+  "query": {"match_all": {}}
+}
+```
+
+La respuesta obtenida es similar al resultado obtenido por la consulta por parámetros en la petición. Solo destacar que el campo **max_score** de cada documento es **1.0**, es decir, que todos los documentos tienen la misma relevancia.
+
+Si queremos establecer el número de documentos que nos devuelve el resultado, establecemos el campo **size**
+
+```
+GET http://localhost:9200/cvs/_search?pretty
+
+{
+  "query": {"match_all": {}},
+  "size": 3
+}
+```
+
+Elasticsearch es un servidor sin estado para las consultas. Esto quiere decir que, cuando se realiza una búsqueda, Elasticsearch no mantiene un cursor abierto o sesión para esa consulta. Todos los resultados de la búsqueda se devuelven de una vez. Los resultados no son paginados. En su lugar, se usa un session Id u otro tipo de marcador, de forma que las peticiones se realizan con la misma session Id para recuperar los resultados paginados.
+
+Se pueden realizar consultas sobre varios índices a la vez, por ejemplo
+
+```
+GET http://localhost:9200/cvs,candidates/_search?pretty
+
+{
+  "query": {"match_all": {}}
+}
+```
+
+Esta consulta devolvería todos los documentos en los índices cvs y candidates.
+
+También podemos obtener resultados ordenados de una consulta 
+
+```
+GET http://localhost:9200/cvs/_search?pretty
+
+{
+  "query": {"match_all": {}},
+  "sort": {"processes": {"order": "desc"}}
+}
+```
+
+Realmente, todas las consultas que podamos hacer con parámetros en la petición las podemos hacer usando un request body, ya que son un subconjunto de las consultas que podemos hacer con request body. Usar request body en la petición es la manera más estandar de hacer consultas, sobre todo por la facilidad del mantenimiento y debug de las consultas.
+
+### Consultas por término
+
+```
+GET http://localhost:9200/cvs/_search?pretty
+
+{
+  "query": {
+  	"term": {"name": "berger"}
+  }
+}
+```
+
+Esta consulta devuelve aquellos documentos en cuyo campo **name** aparece el valor **berger**. No es sensible a mayúsculas o minúsuculas, por lo que buscará el valor **berger** independientemente si está o no en mayúsculas o minúsculas. El resultado 
+
+```
+{
+  "took": 3,
+  "timed_out": false,
+  "_shards": {
+    "total": 1,
+    "successful": 1,
+    "skipped": 0,
+    "failed": 0
+  },
+  "hits": {
+    "total": {
+      "value": 3,
+      "relation": "eq"
+    },
+    "max_score": 5.058972,
+    "hits": [
+      {
+        "_index": "cvs",
+        "_type": "_doc",
+        "_id": "we8K_nAB7f74Y7A0HQ9Z",
+        "_score": 5.058972,
+        "_source": {
+          "id": "63a817ce-3c4e-4b73-a1ec-3bf583a13477",
+          "name": "Berger, Salas",
+          "lastPosition": "magna",
+          "birthDate": "13-12-1981",
+          "lastUpdated": "10-12-2014",
+          "processes": 1,
+          "province": "Chloride",
+          "town": "Colorado",
+          "tags": [
+            {
+              "id": "15af8e2c-ce15-4266-8b39-825ed4e524ef",
+              "ownerId": 892,
+              "description": "Eu ea pariatur proident nulla."
+            },
+            {
+              "id": "5762437a-645d-4f10-9626-7d09def3e767",
+              "ownerId": 880,
+              "description": "Magna anim proident consequat dolore sint sint dolor esse."
+            },
+            {
+              "id": "050c982b-e0ee-4fbc-b5b4-1e3f852748b5",
+              "ownerId": 544,
+              "description": "Anim commodo ipsum quis ut aliqua irure amet tempor occaecat amet duis."
+            },
+            {
+              "id": "4eab60ac-ad99-4d0f-9be4-2e37670e73dc",
+              "ownerId": 584,
+              "description": "Est laboris culpa aliqua commodo non quis reprehenderit ullamco est dolor adipisicing."
+            },
+            {
+              "id": "ed9f897f-b45b-49b3-9ffb-f87f17a09054",
+              "ownerId": 548,
+              "description": "Adipisicing pariatur deserunt cupidatat ullamco."
+            }
+          ],
+          "attachments": []
+        }
+      },
+      {
+        "_index": "cvs",
+        "_type": "_doc",
+        "_id": "ze8K_nAB7f74Y7A0HQ9Z",
+        "_score": 5.058972,
+        "_source": {
+          "id": "e5729f5b-96ba-4ac1-9124-17dfd44cfb2b",
+          "name": "Stanton, Berger",
+          "lastPosition": "Lorem",
+          "birthDate": "20-04-1974",
+          "lastUpdated": "11-05-2015",
+          "processes": 2,
+          "province": "Roberts",
+          "town": "Utah",
+          "tags": [
+            {
+              "id": "bf09f13a-909f-4260-a7ff-e0bcbeee3478",
+              "ownerId": 93,
+              "description": "Deserunt laborum ad tempor aliquip pariatur cupidatat elit irure labore commodo."
+            },
+            {
+              "id": "ee607657-fe5c-4d33-9d8c-b79e1c9c5a10",
+              "ownerId": 989,
+              "description": "Laborum id excepteur minim deserunt amet nostrud Lorem aliqua in."
+            }
+          ],
+          "attachments": []
+        }
+      },
+      {
+        "_index": "cvs",
+        "_type": "_doc",
+        "_id": "LO8K_nAB7f74Y7A0HRFb",
+        "_score": 5.058972,
+        "_source": {
+          "id": "0cc723f2-f1bc-4a0c-8db0-d68e723e6ca2",
+          "name": "Berger, Perry",
+          "lastPosition": "quis",
+          "birthDate": "22-08-1999",
+          "lastUpdated": "12-02-2017",
+          "processes": 4,
+          "province": "Snowville",
+          "town": "Louisiana",
+          "tags": [],
+          "attachments": []
+        }
+      }
+    ]
+  }
+}
+```
+
+### Source filtering document contents
+
+En el mundo real, generalmente no nos va a interesar devolver todos los campos de un documento. Normalmente, los documentos tendrán una gran cantidad de campos y sería ineficiente (transferencia de datos innecesarios) devolverlos todos.
+
+```
+GET http://localhost:9200/cvs/_search?pretty
+
+{
+  "query": {
+  	"term": {"name": "berger"}
+  }
+}
+```
+
+Esta consulta devuelve aquellos documentos en cuyo campo **name** aparece el valor **berger**. El resultado 
+
+```
+{
+  "took": 3,
+  "timed_out": false,
+  "_shards": {
+    "total": 1,
+    "successful": 1,
+    "skipped": 0,
+    "failed": 0
+  },
+  "hits": {
+    "total": {
+      "value": 3,
+      "relation": "eq"
+    },
+    "max_score": 5.058972,
+    "hits": [
+      {
+        "_index": "cvs",
+        "_type": "_doc",
+        "_id": "we8K_nAB7f74Y7A0HQ9Z",
+        "_score": 5.058972,
+        "_source": {
+          "id": "63a817ce-3c4e-4b73-a1ec-3bf583a13477",
+          "name": "Berger, Salas",
+          "lastPosition": "magna",
+          "birthDate": "13-12-1981",
+          "lastUpdated": "10-12-2014",
+          "processes": 1,
+          "province": "Chloride",
+          "town": "Colorado",
+          "tags": [
+            {
+              "id": "15af8e2c-ce15-4266-8b39-825ed4e524ef",
+              "ownerId": 892,
+              "description": "Eu ea pariatur proident nulla."
+            },
+            {
+              "id": "5762437a-645d-4f10-9626-7d09def3e767",
+              "ownerId": 880,
+              "description": "Magna anim proident consequat dolore sint sint dolor esse."
+            },
+            {
+              "id": "050c982b-e0ee-4fbc-b5b4-1e3f852748b5",
+              "ownerId": 544,
+              "description": "Anim commodo ipsum quis ut aliqua irure amet tempor occaecat amet duis."
+            },
+            {
+              "id": "4eab60ac-ad99-4d0f-9be4-2e37670e73dc",
+              "ownerId": 584,
+              "description": "Est laboris culpa aliqua commodo non quis reprehenderit ullamco est dolor adipisicing."
+            },
+            {
+              "id": "ed9f897f-b45b-49b3-9ffb-f87f17a09054",
+              "ownerId": 548,
+              "description": "Adipisicing pariatur deserunt cupidatat ullamco."
+            }
+          ],
+          "attachments": []
+        }
+      },
+      {
+        "_index": "cvs",
+        "_type": "_doc",
+        "_id": "ze8K_nAB7f74Y7A0HQ9Z",
+        "_score": 5.058972,
+        "_source": {
+          "id": "e5729f5b-96ba-4ac1-9124-17dfd44cfb2b",
+          "name": "Stanton, Berger",
+          "lastPosition": "Lorem",
+          "birthDate": "20-04-1974",
+          "lastUpdated": "11-05-2015",
+          "processes": 2,
+          "province": "Roberts",
+          "town": "Utah",
+          "tags": [
+            {
+              "id": "bf09f13a-909f-4260-a7ff-e0bcbeee3478",
+              "ownerId": 93,
+              "description": "Deserunt laborum ad tempor aliquip pariatur cupidatat elit irure labore commodo."
+            },
+            {
+              "id": "ee607657-fe5c-4d33-9d8c-b79e1c9c5a10",
+              "ownerId": 989,
+              "description": "Laborum id excepteur minim deserunt amet nostrud Lorem aliqua in."
+            }
+          ],
+          "attachments": []
+        }
+      },
+      {
+        "_index": "cvs",
+        "_type": "_doc",
+        "_id": "LO8K_nAB7f74Y7A0HRFb",
+        "_score": 5.058972,
+        "_source": {
+          "id": "0cc723f2-f1bc-4a0c-8db0-d68e723e6ca2",
+          "name": "Berger, Perry",
+          "lastPosition": "quis",
+          "birthDate": "22-08-1999",
+          "lastUpdated": "12-02-2017",
+          "processes": 4,
+          "province": "Snowville",
+          "town": "Louisiana",
+          "tags": [],
+          "attachments": []
+        }
+      }
+    ]
+  }
+}
+```
+
+Si en el request body incluímos el campo **_source** con valor false, el resultado de la búsqueda devuelve los resultado sin los campos de los documentos. Por ejemplo
+
+```
+GET http://localhost:9200/cvs/_search?pretty
+
+{
+  "_source": false,
+  "query": {
+  	"term": {"name": "berger"}
+  }
+}
+```
+
+El resultado de la consulta es
+
+```
+{
+  "took": 8,
+  "timed_out": false,
+  "_shards": {
+    "total": 1,
+    "successful": 1,
+    "skipped": 0,
+    "failed": 0
+  },
+  "hits": {
+    "total": {
+      "value": 3,
+      "relation": "eq"
+    },
+    "max_score": 5.058972,
+    "hits": [
+      {
+        "_index": "cvs",
+        "_type": "_doc",
+        "_id": "we8K_nAB7f74Y7A0HQ9Z",
+        "_score": 5.058972
+      },
+      {
+        "_index": "cvs",
+        "_type": "_doc",
+        "_id": "ze8K_nAB7f74Y7A0HQ9Z",
+        "_score": 5.058972
+      },
+      {
+        "_index": "cvs",
+        "_type": "_doc",
+        "_id": "LO8K_nAB7f74Y7A0HRFb",
+        "_score": 5.058972
+      }
+    ]
+  }
+}
+```
+
+Este tipo de consulta es muy eficiente ya que no se transfiere mucha información desde el servidor. Si sólo queremos que la consulta nos devuelva ciertos campos de los documentos, podemos usar el parámetro **_source**. Este parámetro es muy potente porque se pueden establecer expresiones regulares o arrays, por ejemplo, **"_source": ["st*", "*n*"]"**. Esto indicaría que en el resultado de la consulta devolverían los campos del documento que comienzen con **st** y los que contengan **n**. También podemos especificar los campos del documento que queremos devolver, por ejempo **"_source": ["name", "lastPosition"]**.
+
+## Consultas FullText
+
+Una de las características más habituales en las búsquedas es realizar consultas full text. Elasticsearch tiene una gran variedad de maneras de realizar este tipo de consultas y veremos algunos ejemplos.
+
+```
+GET http://localhost:9200/cvs/_search?pretty
+
+{
+  "query": {
+  	"match": {
+      "name": "Berger"
+    }
+  }
+}
+```
+
+En esta consulta Elasticsearch buscará cualquier ocurrencia de **Berger** en el campo **name** de cada documento del índice **cvs**. Con **match** el término por el que se busca **no tiene por qué ser exacto**. No es case sensitive por ejemplo. Pero, se pueden especificar ciertos parámetros en **match** para modificar la forma en la se busca un término. 
+
+### Operadores OR y AND
+
+```
+GET http://localhost:9200/cvs/_search?pretty
+
+{
+  "query": {
+  	"match": {
+      "name": "Berger summit"
+    }
+  }
+}
+```
+
+En esta consulta Elasticsearch buscará cualquier ocurrencia de **Berger** o **summit** en el campo **name** de cada documento del índice **cvs**. Por defecto, Elasticsearch usa el operador **or**, pero se puede establecer otro valor, como **and** [https://www.elastic.co/guide/en/elasticsearch/reference/7.6/query-dsl-match-query.html](https://www.elastic.co/guide/en/elasticsearch/reference/7.6/query-dsl-match-query.html)
+
+### Consultas con palabras exactas
+
+Si queremos buscar exactamente una determinada frase o palabra, usaremos **match_phrase**
+
+```
+GET http://localhost:9200/cvs/_search?pretty
+
+{
+  "query": {
+  	"match_phrase": {
+      "name": "Berger, Salas"
+    }
+  }
+}
+```
+
+### Consultas que comienzan con un prefijo
+
+Otro ejemplo sería
+
+```
+GET http://localhost:9200/cvs/_search?pretty
+
+{
+  "query": {
+  	"match_phrase_prefix": {
+      "name": "Ber"
+    }
+  }
+}
+```
+
+Esta consulta nos devolvería los documentos del índice **cvs** cuyo campo **name** comienza con **Ber**.
+
+### Consultas multi campo
+
+```
+GET http://localhost:9200/cvs/_search?pretty
+
+{
+  "query": {
+  	"multi_match": {
+      "query": "Berger",
+      "fields": ["name", "surname"]
+    }
+  }
+}
+```
+
+Esta consulta buscará el valor **Berger** en los campos **name** y **surname** de cada documento.
+
+### Consultas con condiciones
+
+Si queremos hacer consultas del tipo expr1 AND expre2 AND ... debemos usar el parámetro **bool**. Por ejemplo
+
+```
+GET http://localhost:9200/cvs/_search?pretty
+
+{
+  "query": {
+  	"bool": {
+  		"must": {
+  			"match": {
+  				"name": "Berger"
+  			}
+  		},
+  		"must_not": {
+  			"match": {
+  				"town": "Colorado"
+  			}
+  		}
+    }
+  }
+}
+```
+
+Esta consulta nos devuelve aquellos documentos cuyo nombre contenga **Berger** pero que no sean de la provincia **Colorado**.
+
+El **must** es como si fuese un **AND**, mientras que **should** es como si fuese un **OR**.
+
+## La relevancia en Elasticsearch
+
+Vamos a ver cuáles son los conceptos básicos en los que se basa el algoritmo que utiliza Elasticsearch para asignar una puntuación de relevancia a los documentos cuando se realiza una búsqueda por un término.
+
+El significado de la relevancia en un búsqueda puede tener distintos enfoques, por un lado puede ser que **los resultados de la búsqueda respondió nuestra pregunta o solucionó nuestro problema** o yo como usuario **entiendo por qué el motor de búsqueda recuperó esos resultados**. Los motores de búsqueda modernos tratan de resolver el primer enfoque, solucionar el problema que tenemos actualmente. 
+
+Los primeros motores de búsqueda consideraban que un documento era relevante si el resultado contenía todos los términos por los que se estaba consultando. La segunda generación de motores de búsqueda daban una puntuación a los documentos en relación a otros documentos, estaban más orientados a investigación científica. Luego llegaron los motores de búsqueda de la web, que, al principio, ponían un gran énfasis en tener un alto rendimiento, ya que habían una gran cantidad de información y habían que dar una respuesta en poco tiempo y ponían mucho énfasis en obtener el resultado más relevante para la búsqueda realizada. Y es donde estamos ahora.
+
+En Elasticsearch, el concepto de relevancia viene representado por el campo **_score** de cada documento que forma parte del resultado de una búsqueda. Esta puntuación es lo que determina la relevancia de un documento para una determinada búsqueda. La puntuación obtenida para un documento para un búsqueda en particular viene determinada por el documento en sí mismo y los términos por los que estamos buscando. Cuanto más alta es esta puntuación, más relevancia tiene el documento para la búsqueda realizada. Cada documento tendrá una puntuación de relevancia distinta basada en la consulta realizada.
+
+Una vez que se realiza la búsqueda, Elasticsearch calcula esta puntuación de relevancia al vuelo, antes de recuperar y devolver los resultados. El tipo de búsqueda que se realiza también se tiene en cuenta a la hora de establecer es puntuación. 
+
+Elasticsearch tiene lo que denomina **Fuzzy search** donde el término de búsqueda no es exactamente lo que aparece en el documento. De hecho, Elasticsearch  utiliza en su algoritmo de relevancia si el tipo de búsqueda que se ha realizado es **Fuzzy** o si es una búsqueda esctricta.
+
+El core del algoritmo de relevancia de Elasticsearch se le suele llamar **TF/IDF**, **TF** es debido a **frecuencia del término**, mientras que **IDF** se refiere a la frecuencia del documento inverso. Elasticsearch usa este algoritmo junto con ciertas mejoras.
+
+**TF** se refiere a cómo de a menudo aparece el término o palabra de búsqueda en el campo donde estamos buscando. Mientras que **IDF** se refiere a cómo de a menudo el término de búsqueda aparece en el índice invertido. Otra característica del algoritmo **TF/IDF** es **Field length norm**, que se refiere a cómo de grande es el campo sobre el que estamos buscando, es decir, el campo tiene mucho texto o pocas palabras. Estos tres componentes afectan a la puntuación de relevancia en diferentes en mayor o menor medida.
+
+### TF o frecuencia de término
+
+TF => cómo de habitual es que el término de búsqueda aparezca en el campo en el que estamos buscando?, cuanto más habitual es su aparición, más relevante es el documento. Por ejemplo, si en un campo de un documento aparece el término _fácil_ 5 veces, y en otro documento aparece una o 2 veces, el primero será más relevante para una búsqueda del término _fácil_.
+
+### IDF o frecuencia de documento inversa
+
+IDF => cómo de habitual es que el término de búsqueda aparece en el índice de documentos. Aquí, al contrario que en el TF, cuanto más habitual es su aparición, menos relevante es el documento. Por ejemplo, términos como _a_, _el_, _esto_, ... aparecen en muchos documentos. Si en nuestro término de búsqueda aparecen estos términos, y éstos aparecen en muchos documentos, su relevancia será menor, generalmente no nos interesan los documentos en los que aparecen esos términos.
+
+### Norma de longitud de campo
+
+¿Cómo de largo es el campo por el que se buscó? Si el término de búsqueda aparece en un campo de una longitud muy grande, al documento se le considera menos relevante que aquellos documentos donde el término de búsqueda aparece en campos de longitud más pequeña. Por ejemplo, en un índice con documentos que representan libros, si un término de búsqueda aparece en el campo _título_ de un documento y en otro documento aparece en el campo _sinopsis_, el primer documento será más relevante que el segundo. Esto es debido a que el campo _título_ es más pequeño que el campo _sinopsis_.
+
+Estos componentes forman los bloques básicos del algoritmo TF/IDF que Elasticsearch utiliza para determinar la relevancia de documentos dentro de los resultados de búsqueda. Este algoritmo puede ser combinado con otros factores basados en cómo ejecutamos la consulta, por ejemplo, si es una **fuzzy** match, una match exacta, una prefix match,... estos afectan a la puntuación TF/IDF.
+
+## El problema de los términos comunes
+
+Uno de los grandes problemas con los que tiene que lidiar un algoritmo de búsqueda es cómo debe funcionar con los términos comunes que aparecen en la búsqueda, palabras como es, uno, el, este, ese, ... Estas palabras se llaman **palabras de parada** y éstas deber ser gestionadas de forma inteligente para hacer nuestras búsquedas más relevantes. 
+
+Por ejemplo, consideremos la siguiente búsqueda: "El rápido zorro marrón". Elasticsearch empieza realizando la búsqueda del término **El** en todos los documentos. Luego, de todos los documentos encontrados, empieza a buscar el término **rápido**, luego **zorro** y por último **marrón**. El problema con esta forma de buscar es que el término **El** aparecería en una gran cantidad de documentos. La palabra **El** se considera una **palabra de parada** ya que está en una gran candidad de documentos del índice. Así que, la palabra **El** tendrá poca relevancia en la búsqueda. El resto de palabras, **rápido**, **zorro** y **marrón** tendrán más importancia en la búsqueda.
+
+Un buen algoritmo de búsqueda debe tener este tipo de cosas en cuenta para ajustar lo mejor posible el ranking de relevancia.
+
+Otro problema para los algoritmos de búsqueda es que dejar fuera estas **palabras de parada** puede tener un impacto inexperado en el significado de la búsqueda. Por ejemplo, la palabra **no** es una palabra que lo normal es que aparezca en una gran cantidad de documentos, pero si la dejamos fuera de nuestra búsqueda seríamos incapaces de distinguir entre **suficiente** y **no suficiente**. Y esto es un problema porque el significado de **suficiente** no es lo mismo que **no suficiente**. Elasticsearch lo que hace es aplicar el método de ajustarse. El algoritmo de búsqueda se va ajustando a sí mismo en base a los documentos indexados. Cuando realizamos una búsqueda con varios términos, Elasticsearch divide los términos entre términos de baja frecuencia y de alta frecuencia. Esta división se basa en cómo de habitual es que estos términos ocurren dentro del los documentos del índice. Por ejemplo, en la búsqueda anterior: "El rápido zorro marrón", para Elasticsearch los términos **rápido**, **zorro** y **marrón** tienen una baja frecuencia entre todos los documentos del índice, mientras que el término **El** tiene una alta frecuencia. Una vez hecha esta división, Elasticsearch primero busca los documentos que tienen baja frecuencia, y sobre los documentos resultantes, busca los términos de alta frecuencia. De esta forma, Elasticsearch se asegura que se buscará por los términos de más importancia que por los de menos importancia, pero no son **ignorados**. 
+
+Esta manera de implementar la búsqueda de términos comunes tiene dos beneficios: **mejora la relevancia** y **buen rendimiento**. 
+
+Elasticsearch te permite configurar cómo considerar que un término es o no común, especificando la propiedad **cutoff_frequency**. Por ejemplo, una búsqueda como esta
+
+```
+GET http://localhost:9200/cvs/_search?pretty
+
+{
+  "query": {
+  	"common": {
+  		"cv": {
+  			"query": "Programadores en Java",
+        "cutoff_frequency": 0.0001
+  		}
+    }
+  }
+}
+```
+
+En esta query usamos la palabra clave **common** dentro de la palabra clave **query** para indicar que ciertos términos de búsqueda podrían ser comunes y especificar el **cutoff_frequency**. Con esta búsqueda queremos buscar aquellos programadores Java. En este búsqueda el término **en** es un término muy común que puede aparecer en muchos documentos. Para evitar que nos aparezcan resultados que no tengan mucho que ver con lo que realmente buscamos, podemos definir **cutoff_frequency** para manejar estas situaciones. En este ejemplo, aquellos términos que aparezcan el 0.1% de veces en todos los documentos se consideran como términos comunes.
+
+## Consultas compuestas
+
+Se pueden realizar búsquedas compuestas usando consultas de tipo **boolean**. Podemos recuperar documentos combinando varias consultas utilizando operados booleanos **AND** y **OR**. Existen distintas palabras clave para expresar un rango variados de consultas:
+
+ - **must**, el término de búsqueda debe estar presente en el resultado de la búsqueda. Los resultados de este tipo de consultas tendrán puntuación de relevancia.
+ - **should**, el término de búsqueda puede aparecer en el resultado de la búsqueda pero puede que no. Los resultados de este tipo de consultas tendrán puntuación de relevancia.
+ - **must_not**, el término de búsqueda no debe estar presente en el resultado de la búsqueda. Las consultas de este tipo actúan como un filtro y los resultados no tendrán puntuación de relevancia, ya que la relevancia no importa cuando excluyes resultados.
+ - **filter**, los términos de búsqueda deben aparecer en los resultados pero los resultados no están puntuados por relevancia.
+
+### Consultas por términos
+
+Como ya se ha comentado en otras secciónes, Elasticsearch almacena en el índice invertido los términos de todos los documentos. Una búsqueda basada en términos busca exactamente el término en el índice invertido para los documentos indexados. El cómo estos términos se almacenan en el índice invertido depende del analizador usado, ya que uno puede considerar los signos de puntuación, otros no, parsear todos los términos a minúsculas, etc...
+
+Un ejemplo de consulta basada en términos sería
+
+```
+GET http://localhost:9200/cvs/_search?pretty
+
+{
+  "query": {
+  	"bool": {
+  		"should": [
+  			{ "term": {"town": "idaho"}},
+  			{ "term": {"province": "sardis"}}
+  		]
+  	}
+  }
+}
+```
+
+Como se puede ver en la consulta, se usa la palabra clase **term**. En este caso, el analizador guarda en el índice invertido los términos de los documentos en minúscula, y si hiciésemos la misma búsqueda con alguna letra en mayúscula, no obtendríamos ningún resultado.
+
+También podemos hacer que a la hora de buscar un término tenga más relevancia que otro configurando la propiedad **boost**. Esto indica que un término tenga más importancia que otro, por ejemplo
+
+```
+GET http://localhost:9200/cvs/_search?pretty
+
+{
+  "query": {
+  	"bool": {
+  		"should": [
+  			{ "term": {"province": { "value": "columbus", "boost": 2.0}},
+  			{ "term": {"province": "sardis"}}
+  		]
+  	}
+  }
+}
+```
+
+El resultado de esta consulta mostraría que los documentos en los que apareciese el término **columbus** serían más relevantes.
+
+### Realizar búsquedas utilizando filtros (Filter Context)
+
+Lo primero que hay que tener en cuenta es que este tipo de búsquedas no tienen puntuación. Todos los documentos responden **sí** o **no** si deberían estar incluídos o no en el resultado de la búsqueda.
+Ejemplos de búsqueda usando filtros:
+
+Esta consulta devuelve todos los documentos que tienen procesos entre 2 y 5.
+```
+GET http://localhost:9200/cvs/_search?pretty
+
+{
+  "query": {
+  	"bool": {
+  		"must": { 
+  			"match_all": {}
+  			}, 
+		"filter": {
+			"range": {
+				"processes": {
+					"gte": 2,
+					"lte": 5
+				}
+			}
+		}	  		
+  	}
+  }
+}
+```
+
+Esta consulta devuelve todos los documentos de la ciudad **Idaho** de la provincia **hanover** que tienen procesos entre 2 y 5.
+
+```
+GET http://localhost:9200/cvs/_search?pretty
+
+{
+  "query": {
+  	"bool": {
+  		"must": { 
+  			"match": {
+  				"town": "Idaho"
+  			}
+  		}
+  		, 
+		"filter": [
+			{"term": {
+				"province": "hanover"	
+			}},
+			{
+			"range": {
+				"processes": {
+					"gte": 2,
+					"lte": 5
+				}
+			}}
+		]
+  	}
+  }
+}
+```
