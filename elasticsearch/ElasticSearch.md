@@ -1,28 +1,22 @@
 # Elastic Search
 
-Elasticsearch es un motor de búsqueda open source altamente escalable. A pesar de que empezó como un buscador de texto 
-ha evolucionado como una herramienta de análisis, que soporta no solo búsquedas simples sino también agregación compleja 
-de información. Su naturaleza distribuida permite su escalabilidad a medida que la cantidad de información que 
-contiene crece, sin perder rendimiento de forma significativa.
+Elasticsearch es un motor de búsqueda open source altamente escalable. 
 
-Elasticsearch está basado en Apache Lucene (al igual que Apache Solr) y está implementado en Java. Lucene provee busqueda 
-e indexación, Elasticsearch amplía Lucene añadiendo una cómoda API REST basada en JSON para facilitar la comunicación 
-con Lucene y además provee las características de sistema distribuido que permite escalar la herramienta de forma casi 
-transparente al usuario.
+A pesar de que empezó como un buscador de texto ha evolucionado como una herramienta de análisis, que soporta no solo búsquedas simples sino también agregación compleja 
+de información. Su naturaleza distribuida permite su escalabilidad a medida que la cantidad de información que contiene crece, sin perder rendimiento de forma significativa.
 
-## Empezando
+Elasticsearch está basado en Apache Lucene (al igual que Apache Solr) y está implementado en Java. Lucene provee busqueda e indexación. Elasticsearch extiend Lucene añadiendo una cómoda API REST basada en JSON para facilitar la comunicación 
+con Lucene y además provee las características de sistema distribuido que permite escalar la herramienta de forma casi transparente al usuario.
 
-### Cómo funciona una búsqueda
+## Cómo funciona una búsqueda
 
-Cualquier aplicación que se precie necesita buscar de alguna forma la información que posee. **Buscar** es encontrar los 
-documentos más relevantes que existan que cumplan con los criterios de búsqueda. Esto parece sencillo pero, en un motor de
-búsqueda ocurren varias cosas por detrás para llevar a cabo esto.
+Cualquier aplicación que se precie necesita buscar de alguna forma la información que posee. **Buscar** es encontrar los documentos más relevantes que existan que cumplan con los criterios de búsqueda. Esto parece sencillo pero, en un motor de búsqueda pasan muchas cosas por detrás para llevar a cabo esta tarea aparentemente sencilla.
 
-1.- El motor de búsqueda debe tener conocimiento de la existencia de documentos, encontrarlo e indexarlo.
+1.- El motor de búsqueda debe tener conocimiento de la existencia de documentos, encontrarlos e indexarlos.
 
 2.- La indexación de un documento es necesario para que se puedan hacer búsquedas en el futuro.
 
-3.- Por cada palabra de búsqueda que realiza el usuario, tenemos que conocer cómo de relevante es el documento que la contiene. La relevancia es la combinación de los términos de búsqueda más el documento en sí.
+3.- Por cada palabra de búsqueda que realiza el usuario, tenemos que conocer cómo de relevante es el documento que la contiene. La relevancia es una combinación entre los términos de búsqueda y el documento en sí.
 
 4.- La búsqueda en sí misma.
 
@@ -100,9 +94,9 @@ Si queremos dar un nombre específico al clúster y al nodo, podemos hacerlo de 
 Elasticsearch permite hacer búsquedas prácticamente en tiempo real, con una latencia de aproximadamente 1 segundo entre el tiempo que un documento es indexado y el tiempo en el que el documento está disponible para ser buscado.
 
 #### Nodos
-Elasticsearch es distribuido por naturaleza. Se ejecuta en varias máquinas dentro un **clúster**. Una de esas máquinas dentro del clúster es un **nodo**.
+Elasticsearch es distribuido por naturaleza. Se ejecuta en varias máquinas (físicas o virtuales) dentro un **clúster**. Cada una de esas máquinas dentro del clúster es un **nodo**.
 
-Cada nodo dentro del clúster realiza las operaciones de indexación para poder indexar todos los documentos que se añaden a Elasticsearch. Todos los nodos también participan en las operaciones de búsqueda y análisis. Cualquier búsqueda se ejecutará en varios nodos en paralelo.
+Cada nodo tiene un identificador y nombre únicos. Cada nodo dentro del clúster realiza las operaciones de indexación para poder indexar todos los documentos que se añaden a Elasticsearch. Todos los nodos también participan en las operaciones de búsqueda y análisis. Cualquier búsqueda se ejecutará en varios nodos en paralelo.
 
 Cada nodo dentro del clúster tiene un identificador y nombre único. Estos datos son para referirnos a un nodo en las tareas de administración del clúster.
 
@@ -116,9 +110,12 @@ En Elasticsearch hay 4 tipos de nodos:
  - Nodos de ingesta se encargan de preprocesar los documentos antes de almacenarlos. Son poco frecuentes. Por ejemplo, si la indexación de documentos es un cuello de botella porque en un corto periodo de tiempo se tienen que indexar miles de documentos, entonces se puede crear un nodo de ingesta para que procese esta información.
 
 #### Clúster
+
 Un **cluster** es una colección de nodos que operan juntos para llevar a cabo un mismo objetivo. Un clúster de Elasticsearch puede escalar a cientos e incluso miles de nodos, o incluso un único nodo en el clúster. Cualquier índice que se cree para que los documentos sean susceptibles de ser buscados se guardan en el clúster. Todo clúster tiene un nombre único, que si no se especifica, por defecto es **elasticsearch**. 
 
-La forma que tenemos de escalar es añadir nuevos nodos al clúster especificando el nombre de éste a la hora de levantarlo. Los nodos dentro del clúster se encontrán a sí mismos dentro de Elasticsearch enviándose mensajes. Las máquinas que representan los nodos dentro del clúster deben estar en la misma red.
+Cada clúster tiene un nombre único y es por este nombre por el que se unen los nodos dentro del clúster.
+
+La forma que tenemos de escalar es añadir nuevos nodos al clúster es especificando el nombre de éste a la hora de levantarlo. Los nodos dentro del clúster se encontrán a sí mismos dentro de Elasticsearch enviándose mensajes. Las máquinas que representan los nodos dentro del clúster deben estar en la misma red.
 
 #### Tipos de documentos (deprecado a partir de la versión 6)
 
@@ -145,7 +142,7 @@ Si el número de documentos a almacenar es muy grande o el tamaño de estos docu
 
 #### Réplicas
 
-Para tener alta disponibilidad de la información y tolerantes a fallos necesitamos replicar la información. Esto se hace configurando **réplicas** de nuestro índice. Cada **shard** tendrá una réplica. Así, si uno de nuestros nodos falla, su información estará replicada en un shard de otro nodo.
+Para tener alta disponibilidad de la información y tolerantes a fallos necesitamos replicar la información. Esto se hace configurando **réplicas** de nuestro índice. Cada **shard** tendrá una o varias réplicas. Así, si uno de nuestros nodos falla, su información estará replicada en un shard de otro nodo.
 
 Así que, fragmentando nuestro índice y replicando cada shard es como conseguimos que las operaciones de búsqueda sean eficientes y rápidas, y que nuestro clúster sea tolerante a fallos y altamente disponible.
 
@@ -158,6 +155,8 @@ Un índice se puede separar en varias máquinas, formando así subconjuntos de �
 Un **shard** puede ser **replicado** cero o más veces. Podemos tener tantas réplicas como pensemos que vayamos a necesitar.
 
 Por defecto, Elasticsearch tiene 5 shards y 1 réplica. Así que, cada shard tiene un backup.
+
+El número de shards debe indicarse a la hora de crear el índice, una vez creado no se puede modificar. Pero, el número de réplicas se puede cambiar de forma dinámica, una vez que el índice haya sido creado e indexado.
 
 Visión general de un clúster de Elasticsearch
 
@@ -1660,7 +1659,8 @@ Elasticsearch tiene lo que denomina **Fuzzy search** donde el término de búsqu
 
 El core del algoritmo de relevancia de Elasticsearch se le suele llamar **TF/IDF**, **TF** es debido a **frecuencia del término**, mientras que **IDF** se refiere a la frecuencia del documento inverso. Elasticsearch usa este algoritmo junto con ciertas mejoras.
 
-**TF** se refiere a cómo de a menudo aparece el término o palabra de búsqueda en el campo donde estamos buscando. Mientras que **IDF** se refiere a cómo de a menudo el término de búsqueda aparece en el índice invertido. Otra característica del algoritmo **TF/IDF** es **Field length norm**, que se refiere a cómo de grande es el campo sobre el que estamos buscando, es decir, el campo tiene mucho texto o pocas palabras. Estos tres componentes afectan a la puntuación de relevancia en diferentes en mayor o menor medida.
+**TF** se refiere a cómo de a menudo aparece el término o palabra de búsqueda en el campo donde estamos buscando. Mientras que **IDF** se refiere a cómo de a menudo el término de búsqueda aparece en el índice invertido. Otra característica del algoritmo **TF/IDF** es **Field length norm**, que se refiere a cómo de grande es el campo sobre el que estamos buscando, es decir, si el campo tiene mucho texto o pocas palabras. Estos tres componentes afectan a la puntuación de relevancia en diferentes en mayor o menor medida.
+Por ejemplo, si un término raro es muy ocurrente en un documento pero no entre los documentos del índice, entonces ese término será muy significativo para ese documento.
 
 ### TF o frecuencia de término
 
@@ -1816,3 +1816,496 @@ GET http://localhost:9200/cvs/_search?pretty
   }
 }
 ```
+
+# Diseñando esquemas para Elasticsearch
+
+Uno de los motivos por lo que Elasticsearch es tan popular es por su facilidad de uso. Tan solo tenemos que indexar los documentos sobre los que queremos buscar y Elasticsearch se encarga de todo lo demás para poder empezar a buscar sobre esos documentos.
+
+El tema es que nuestra aplicación crece en el tiempo, los tipos de documentos que indexamos pueden cambiar, tener otra disposición, y el índice que creamos al principio puede que ya no tenga un rendimiento óptimo ni funcione bien. Llega un momento en que los índices tienen que ser tuneados. Y esto nos conduce al uso de mapeos.
+
+Los mapeos son tipos de datos que se asocian a los campos dentro de un documento, y ésto afecta a cómo son indexados y cómo pueden ser buscados.
+
+# Modelando datos en Elasticsearch
+
+## Mapeos
+
+El mapeo se refiere al esquema que tendrán los documentos que se guardan en Elasticsearch. 
+Básicamente se trata de definir los tipos de datos de los campos del documento. Este mapeo es 
+importante porque nos indica cómo se guardarán los términos dentro de un campo en el índice y cómo se buscarán
+en él. 
+
+Elasticsearch soporta varios tipos de datos que clasifica en 3 tipos de datos:
+ - **Simple**, que son básicamente los tipos de datos primitivos de cualquier lenguaje de programación 
+ junto con otros tipos como: text, keyword, date, long, double, ip, boolean
+ - **Jerárquicos**, para definir objetos o relaciones padre-hijos: object, nested
+ - **Especializados**, tipos de datos que son útiles en ciertos casos de uso reales como datos de
+ posicionamiento: geo_point, geo_shape; o datos de autocompletado: completion
+
+Pero, hay que tener en cuenta que Elasticsearch es **schemaless**, es decir, que se identifica por
+no ser tipado frente a datos. Si nosotros no especificamos ningún tipo de dato, no hacemos ningún
+tipo de mapeo, cuando indexamos nuestros documentos, Elasticsearch intentará inferir por nosotros
+el tipo de dato. Esta característica se denomina **mapeo dinámico**.
+
+Los tipos dinámicos es lo que hace que parezca que Elasticsearch sea schemaless y que sea tan 
+fácil ponerse a funcionar, gracias a esta característica. En la siguiente imagen se muestra qué
+inferencia de tipos realiza Elasticsearch si no realizamos ningún tipo de mapeo, aunque los mapeos de String son un poco especiales.
+
+![Mapeos dinámicos](images/mapping.png)
+
+Para un uso normal o a nivel principiante de Elasticsearch puede bastar con la inferencia de 
+tipos que hace Elasticsearch, pero si hacemos un uso más avanzado y queremos que nuestras 
+búsquedas sean más precisas y correctas es muy útil hacer mapeos porque éstos determinan cómo 
+se guardan e indexan los documentos, y ésto tiene un impacto directo en cómo se realizan las 
+búsquedas.
+
+### Campos String
+
+Los campos de tipo **string** pueden ser habilitados para realizar búsquedas **full-text**, es decir
+ que los tokens individuales del **string** son susceptibles de ser buscados. La búsqueda full-text también quiere decir que podemos aplicar expresiones regulares para buscar dentro del **string**, o realizar búsquedas parciales.
+
+También, los campos de tipo **string** pueden ser habilitados para realizar búsqueda por palabra clave (**keyword** search). Este tipo de búsqueda se centra únicamente en búsquedas 
+exactas, sólo se pueden buscar los valores del **string** y no tokens individuales del **string**.
+
+Por ejemplo, si realizamos una búsqueda del **string**: "Hola, qué tal estás?", en una búsqueda de tipo **keyword** se buscaría el **string** completo, mientras que en una búsqueda **full-text** se buscaría cada elemento o token del **string** en los documentos.
+
+El tipo de dato **text** es el que se usa si vamos a usar ese campo en una búsqueda **full-text**, mientras que el tipo de dato **keyword** se usa si vamos a usar ese campo como una búsqueda **keyword**.
+
+Los tipos de datos no son mutuamente excluyentes, es decir, podemos definir un campo como **text** y **keyword** al mismo tiempo. Este tipo de característica se denomina **multi-field**.
+
+Si definimos un campo como **full-text**, el contenido del campo es tokenizado en función del analizador especificado. Cada token se indexa y son posibles las coincidencias parciales del **string**. Por ejemplo, el **string**: Cómo estás tú?, se divide el **string** en *Cómo*, *estás* y *tú* como palabras separadas, y cada una de estas palabras estarán disponibles en 
+nuestro índice y estarían disponibles para realizar búsquedas sobre ellas de forma independiente. 
+
+En cambio, si definimos el campo como **keyword**, el **string** se considera como una unidad, 
+el **string** completo es indexado y los tokens individuales no son indexados. La búsqueda debe ser por el **string** exacto.
+
+Desde Elasticsearch 5 en adelante, todos los **string** son mapeados como **text** y **keyword** por defecto.
+
+### Mapeo por defecto
+
+Cuando creamos un índice, si queremos ver el mapeo por defecto que ha aplicado Elasticsearch, lo podemos hacer realizando una petición al **_mapping** path
+
+```
+GET http://localhost:9200/books/_mapping?&pretty
+```
+
+```
+{
+  "books": {
+    "mappings": {}
+  }
+}
+```
+
+Esta respuesta es la típica cuando aún no hemos añadido ningún documento al índice. 
+
+Cuando el índice tiene ya algún documento, una respuesta de salida típica es
+
+```
+{
+  "books": {
+    "mappings": {
+      "properties": {
+        "author": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "availaible": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "cost": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        },
+        "number": {
+          "type": "long"
+        },
+        "publication": {
+          "type": "date"
+        },
+        "title": {
+          "type": "text",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+Por ejemplo, al campo **author**, Elasticsearch le ha asignado el tipo **text**, que indica que sobre ese campo podremos realizar búsquedas de tipo full-text, pero también le ha asignado el tipo **keyword**, que indica que podemos realizar búsquedas de tipo keyword, para realizar filtros, ordenaciones y agregaciones. 
+
+Hay que tener en cuenta que, para los campos de tipo **keyword** el campo **ignore_above** se establece a 256 caracteres. Esto indica que si se indexa un documento con un contenido superior a 256 caracteres en el campo **author**, Elasticsearch ignorará los caracteres por encima de ese valor.
+
+Vemos también que los campos **publication** y **number** se han mapeado a **date** y **long** respectivamente, y el resto de campos a **text** **keyword**, cuando, por ejemplo, los campos **availaible** debería haber sido de tipo **boolean** y el campo **cost** de tipo **float**.
+
+Lo primero que tenemos que hacer es deshabilitar el campo **_source**. Este campo es un campo que Elasticsearch incluye cuando se indexa un documento, y es un campo por el que no se puede buscar ni indexar por defecto. Contiene el JSON completo del documento. Deshabilitando este campo conseguimos que los documentos **no ocupen demasiado espacio en disco**.
+
+Para deshabilitar el mapeo por defecto 
+
+```
+PUT http://localhost:9200/books?pretty
+
+{
+"mappings": 
+	{
+		"fiction": 
+			{
+				"_source": {
+					"enabled": false
+				}
+			}
+		
+	}
+}
+```
+
+Si en el ínidice ya había algún documento, Elasticsearch nos responderá con un error, ya que una vez que hayamos indexado un documento **no podremos editarlo** posteriormente. Sólo puede configurarse el mapeo cuando el índice se crea por primera vez.
+
+Sólo se puede actualizar el mapping de los tipos de datos cuando se vayan a indexar nuevos campos en el documento. Es la única actualización que se puede hacer del mapping.
+
+### Detección de tipos numéricos y fecha
+
+A la hora de mapear datos, Elasticsearch nos permite establecer cierta configuración después de crear un índice. Por ejemplo, podemos establecer que el mapping detecte automáticamente los tipos numéricos con el siguiente uso del API REST
+
+```
+PUT http://localhost:9200/books?pretty
+
+{
+"mappings": 
+	{
+		"fiction": 
+			{
+				"numeric_detection": true
+			}
+		
+	}
+}
+``` 
+
+Respecto a las fechas, si no proporcionamos a Elasticsearch el formato que espera, Elasticsearch considera que es un campo de tipo **text** **keyword**, como si fuese un string. Por defecto, el formato esperado es yyyy/MM/dd HH:mm:ss | yyyy/MM/dd | epoc_millis. Si el valor del campo sigue alguno de estos formatos, Elasticsearch lo considerará de tipo **date**. Y esto es porque por defecto la propiedad mapping **date_detection** es true. Podemos deshabilitar esta configuración por defecto
+
+```
+PUT http://localhost:9200/books?pretty
+
+{
+"mappings": 
+	{
+		"fiction": 
+			{
+				"date_detection": false
+			}
+		
+	}
+}
+``` 
+
+### Mapping explícito
+
+Podemos establecer el tipo de dato de cada campo de un documento que se va a indexar en un índice. Un ejemplo de configurar un índice y el mapping de los tipos de datos de los campos de los documentos del índice sería
+
+```
+{
+  "settings": {
+    "number_of_shards": 1,
+    "number_of_replicas": 0
+  },
+  "dynamic": "strict",
+  "mappings": {
+    "fiction": {
+      "_source": {
+        "enabled": false
+      },
+      "_all": {
+        "enabled": false
+      },
+      "properties": {
+        "title": {"type": "text"},
+        "available": {"type": "boolean"},
+        "pages": {"type": "integer"},
+        "cost": {"type": "float"},
+        "published": {
+          "type": "date",
+          "format": "YYYY-MM-DD"
+        }
+      }
+    }
+  }
+}
+``` 
+
+El campo **dynamic** puede tomar 3 valores:
+ - true (por defecto), se aceptan campos nuevos en el índice
+ - false, nuevos campos son aceptados pero ignorados cuando se indexan
+ - strict, no se aceptan nuevos campos, la indexación de nuevos campos provocará un error
+
+Tener el tipo de dato correcto de los campos de un documento tiene grandes beneficios dependiendo del caso de uso que tengamos (ordenaciones, agregaciones, filtros, etc...)
+
+El mapping de tipos de datos del índice se debe establecer en la creación del índice
+
+```
+curl -XPUT 'http://localhost:9200/books?pretty' -d @setting.json -H 'Content-Type: application/json'
+```
+
+Como comentamos anteriormente, podemos deshabilitar el campo **_source** para ahorrar espacio en disco.
+
+También, cada elemento en Elasticsearch tiene un campo **_all**, que concatena todos los campos en un único y gran string utilizando el espacio como delimitador entre campos. Por defecto, este campo está deshabilitado pero puede resultar interesante si queremos realizar una búsqueda de un término en todos los campos del documento sin conocer exactamente qué campo contiene la información. 
+
+### Mapping dinámico de otros tipos
+
+En la siguiente imagen se puede ver un resumen del mapping dinámico que hace Elasticsearch
+
+![Mapping dinámico](images/dynamic_mapping.png)
+
+Hay que tener especial cuidado con el mapping dinámico que hace Elasticsearch porque en muchos casos no nos va a interesar ese tipo de mapping. Por ejemplo, si mapeamos una fecha que no es el formato que espera Elasticsearch, éste mapeará el campo a tipo **text**. De esta forma podremos hacer búsquedas parciales sobre el campo fecha, pero no es un caso de uso habitual. Igual pasa con un campo numérico que a la hora de indexar en Elasticsearch le llega como un **string**, Elasticsearch lo mapeará a un tipo **text**, que tampoco es un caso de uso habitual hacer búsquedas parciales sobre enteros, sino más bien de tipo exacta o keyword, para poder hacer ordenaciones, agregaciones, etc...
+
+Por lo tanto, **antes de crear un índice se recomienda pensar en el tipo de datos del documento y qué tipo de búsqueda se va a realizar sobre ellos**.
+
+### Plantillas dinámicas
+
+Lo más habitual es que no sepamos todos los campos de los documentos que vamos a ir indexando, es decir, en el momento de hacer una primera indexación puede que los documentos tengan cierto tipo de campos, pero con el tiempo, se vayan añadiendo nuevos campos a los documentos. 
+
+Para este tipo de situaciones Elasticsearch proporciona las **plantillas dinámicas**. Por ejemplo, podemos crear una plantilla dinámica personalizada para que todo aquel campo que Elasticsearch considera que es un **long** se asigne realmente el tipo **integer**, o si Elasticsearch considera que es un **string**, realmente se asigne el tipo **text**.
+
+Las plantillas tienen un nombre, y este nombre es importante ya que si más adelante nos interesa sustituir esa plantilla por otra, bastará con crear una nueva plantilla con el mismo nombre.
+
+Ejemplo de creación de uso de una plantilla:
+
+## Analizadores
+
+Los analizadores determinan cómo el documento es parseado y tokenizado antes que los términos se guarden en el índice.
+
+Por ejemplo, cuando queremos realizar una búsqueda de los términos "Humpty dumpty tumbled off a wall" en los documentos. 
+
+Nosotros eperaríamos que buscase el término **Humpty**, que sería una coincidencia exacta, pero también nos gustaría que encontrara resultados si en los documentos estuviese el término **humpty**, **HUmpty**, y así, una combinación sucesiva de mayúsculas y minúsculas. Elasticsearch hace esto posible **normalizando** todos los campos de los documentos que se añaden al índice. Es más, cada término que indicamos en nuestra búsqueda es normalizado. **Elasticsearch normaliza cada término a minúsculas**. 
+
+Otro ejemplo de búsqueda deseada sería que, dado que hemos puesto en los términos de búsqueda la palabra **wall**, pudiese encontrar documentos en los que aparezca la palabra **walls** ya que el significado es el mismo, pero en plural. Elasticsearch hace esto posible **stemming** los términos de los documentos. Si en nuestro documento se indexa la palabra **correr**, Elasticsearch indexará también variaciones que tengan el mismo significado, por ejemplo, **corriendo**, **corre**, **corremos**, etc... 
+
+Pero además, Elasticsearch puede llegar a ser incluso más potente encontrando sinónimos de palabras, y por cada término que añadamos en el índice, indexará también sinónimos de ésta.
+
+Las tareas que realiza un analizador puede dividirse en dos grandes categorías:
+
+ - Tokenizar: consiste en descomponer el texto del documento en términos individuales que son añadidos al índice invertido.
+
+ - Normalizar: consiste en coger cada unos de los términos y transformarlos a una forma estándar que sea fácil de tratar. Realizar el proceso de *stemming* o añadir sinónimos al índice, son procesos que forman parte de la normalización.
+
+El análisis de un documento es un proceso de 3 pasos que se realiza antes de que los términos de un documento se añadan al índice:
+
+ 1. Filtro de carácteres
+
+ En este paso se limpia el string que se le pasa, por ejemplo, limpiar de código HTML, convertir **&** a **and**, etc... 
+
+ 2. Tokenizar
+
+ Dividir el string pasado del primer paso en términos individuales. La división se puede hacer por espacios en blanco, por signos de puntuación. Elasticsearch ofrece una buena variedad de formas de tokenizar basadas en nuestro caso de uso.
+
+ 3. Token filters
+
+ En este paso se cambian, añaden o eliminan términos del índice. Todos los procesos de normalización, como convertir a minúsculas, añadir sinónimos, stemming de palabras, se realizan en este paso de token filters.
+
+Elasticsearch ofrece de serie algunos analizadores, pero podemos construirnos nuestros propios analizadores. 
+
+Veamos con un ejemplo cómo funcionan algunos de los analizadores que vienen de serie con Elasticsearch.
+
+Por ejemplo, la frase: "Use the built-in function set_len(8)". 
+
+### Analizador estándar
+
+Esta frase producirá los tokens o términos use, the, built, in, function, set_len, 8. Elimina los signos de puntuación, convierte los términos a minúsculas.
+
+### Analizador simple
+
+Esta frase producirá los tokens o términos use, the, built, in, function, set, len. Divide los términos por cada caracter que no es una letra, convierte los términos a minúsculas.
+
+### Analizador whitespace
+
+Esta frase producirá los tokens o términos Use, the, built-in, function, set_len(8). Divide los términos por caracter en blando, no convierte los términos a minúsculas.
+
+Entonces, basado en nuestro caso de uso podemos usar alguno de los analizadores que vienen de serie en Elasticsearch o crear el nuestro propio.
+
+# Gestión de contenido relacionado
+
+Elasticsearch trata los documentos como estructuras planas de entidades independientes, pero en la mayoría de los casos de usos reales, la información está relacionada de alguna manera lógica.
+
+Una relación muy común que da en la realidad son las relaciones padre-hijo. Elasticsearh soporta estas relaciones jerárquicas utilizando campos anidados. 
+
+## Mundo relacional
+
+Normalmente, cuando hemos querido mantener información relacionada, se han utilizado las bases de datos relacionadas, para tener, distintas tablas relacionadas entre sí para, por ejemplo, no duplicar información. Luego, podemos hacer consultas para recuperar en una query la información de varias tablas relacionadas mediante JOINS, pero esto, no tiene muy buen rendimiento sobre todo cuando las tablas tienen gran cantidad de datos. Además, las bases de datos tienen el beneficio que las operaciones de creación, borrado y actualización son ACID, pero cuando queremos hacer búsquedas rápidas, esto no da un buen rendimiento.
+
+## Mundo plano
+
+En cambio, en el mundo plano de Elasticsearch, un índice es una colección plana de documentos independientes, que contienen pares de clave-valor. Los documentos tienen campos que tienen una estructura pobre, es decir, por ejemplo, si tenemos documentos que tienen datos de empleados, puede que la mayoría de esos documentos tengan datos como el nombre, el salario, el puesto, pero puede que algunos tengan teléfono, otros email, otros domicilio, etc..., es decir, que no todos los documentos pueden tener la misma información. Lo normal es que en nuestro índice tengamos documentos con la misma información, pero no es una condición necesaria, no tienen por qué estar estructurados de la misma forma.
+
+Toda la información por la que puede ser buscado un documento debería estar en el mismo documento del mismo índice, por cuestión de rendimiento, para que las búsquedas sean rápidas. Es decir, cada documento debe ser independiente de otros documentos, debe tener su propia información, incluso si tiene alguna relación lógica, debería ir en el mismo documento.
+
+## Construyendo el puente entre la información relacional y la plana
+
+Hay una necesidad natural de establecer un puente entre la información relacional y la plana que mantiene Elasticsearch. Esto se puede hacer de 4 formas distintas:
+
+- Applications-side joins
+- Desnormalización de datos
+- Objetos anidados
+- Relaciones padres-hijos
+
+### Applications-side joins
+
+Veamos como funciona applications-side joins para simular las relaciones. Supongamos que tenemos una web de blogs y que tenemos usarios que escriben blogs. Por ejemplo, podríamos añadir usuarios indexandolos en un índice de usuarios
+
+```
+PUT /user_index/user/123
+{
+  "name": "John Smith",
+  "email": "john@smith.com"
+}
+``` 
+
+Con este payload, crearíamos el usuario *John Smith* con identificador 123. Ahora supongamos que tenemos otro índice donde indexamos los blogs escritos por los usuarios
+
+```
+PUT /blog_index/blogspot/100
+{
+  "title": "Relationships",
+  "body": "It's complicated",
+  "user": 123
+}
+```
+
+Con este payload, crearíamos un documento que representa la información de un blog, y hay un link al usuario especificando qué usuario es responsable del blog.
+
+La información se guarda de forma desnormalizada. El dato del usuario no es realmente un dato del blog, pero se está incluyendo para saber qué usuario es responsable.
+
+Una consulta natural sería saber qué blogs ha creado un determinado usuario, por ejemplo el usuario John. Esta consulta requeriría hacer dos búsquedas en Elasticsearch: buscar todos los user Ids cuyo nombre contiene *John* del índice user, y una vez tengamos estos identificadores de usuario, realizar otra consulta al índice de blogs de los documentos que tienen los identificadores de usuario obtenidos de la anterior consulta. 
+
+Entonces, para una consulta tan sencilla, hay que hacer consultas entre distintos índices y una vez obtenida la respuesta, tiene que ser la aplicación que está por encima de Elasticsearch que recoja esa información para encontrar los blogs escritos por un usuario.
+
+Esta forma de proceder es bastante penosa y no es un buen uso de Elasticsearch.
+
+### Desnormalización de datos
+
+La forma más óptima de trabajar con Elasticsearch para que nuestras búsquedas vayan más rápida es trabajar con los datos desnormalizados, que los documentos sean entidades independientes. 
+
+Siguiendo con el ejemplo anterior, en los documentos del blog indexaríamos también la información del usuario. Los datos del usuario es un objeto dentro del documento del blog.
+
+```
+PUT /blog_index/blogspot/100
+{
+  "title": "Relationships",
+  "body": "It's complicated",
+  "user": {
+    "name": "John Smith",
+    "email": "john@smith.com"
+  }
+}
+```
+
+Se puede llegar a pensar que incluir esta información en cada documento del índice puede ser un problema de espacio. Pero el espacido de disco es barato. Lo que se busca es rapidez en las búsquedas. Aunque la información se guarde de forma redundante, hacer una búsqueda de los posts escritos por un determinado usuario, es una consulta muy sencilla.
+
+Por ejemplo, la búsqueda sería 
+
+```
+GET /blog_index/blogspot/_search?pretty
+{
+  "query" : {
+    "match": {"user.name": "John"}
+  }
+}
+```
+
+### Objetos anidados
+
+En algunos casos, la estructura de un documento puede tener objetos anidados, por ejemplo, supongamos que tenemos un índice con los libros que ha publicado un autor
+
+```
+{
+  "name": "John Green",
+  "books": [
+    {
+      "name": "Book One",
+      "genre": "Romance"
+    },
+    {
+      "name": "Book Two",
+      "genre": "Fiction"
+    }
+  ]
+}
+```
+
+En este tipo de estructura hay que tener precaución ya que, Elasticsearch por defecto no agrupa la información de manera lógica. Esto hace que si, por ejemplo, hacemos una consulta por Book One Fiction obtendríamos resultados, pero nosotros esperaríamos que no, y esto es porque Elasticsearch a la hora de mapear esta información, no la almacena de forma lógica, la almacena de esta forma
+
+```
+{"books.name": ["Book One", "Book Two"]}
+{"books.genre": ["Romance", "Fiction"]}
+```
+
+Para que Elasticsearch considere la información de cada objeto de forma lógica, a la hora de mapear el campo al crear el índice deberíamos mapearlo de tipo **nested**
+
+```
+{
+  "mappings": {
+    "author": {
+      "properties": {
+        "books": {
+          "type": "nested"
+        }
+      }
+    }
+  }
+}
+```
+
+El tipo **nested** preserva la agrupación lógica para cada objeto dentro del array **books**. 
+
+### Relaciones padres-hijos
+
+Elasticsearch tiene una manera de representar las relaciones padre-hijo entre documentos que conviven en el mismo índice. 
+
+Entre las ventajas que tiene este tipo de relación en Elasticsearch encontramos:
+ - es que una reindexación del documento padre no implica reindexar los documentos hijo.
+ - añadir, actualizar o eliminar documentos hijo no afectan al documento padre.
+ - se pueden consultar fácilmente los documentos hijo para un documento padre dado.
+
+Para que este tipo de relación sea efectiva, tanto el documento padre como los documentos hijo deberían vivir en el mismo **shard** en el clúster. Como bien sabemos, los documentos de un índice se dispersan entre los shards y réplicas que pueden estar en diferentes máquinas en el clúster. Los documentos padre e hijos deberían indexarse en el mismo shard.
+
+Para especificar una relación padre-hijo en Elasticsearch se configuran usando el campo **join**. Este campo se utilizar para indicar cómo los documentos padre e hijos van a ser etiquetados.
+
+Elasticsearch proporciona búsquedas **has_child** o **has_parent** para ayudarnos a realizar búsquedas en relaciones padre-hijo, pero afectan al rendimiento y hay que usarlas con cuidado.
+
+Es bueno tener esta opción de modelar este tipo de relaciones, pero hay que tener en cuenta que tienen un impacto a nivel de rendimiento. No es recomendable usar este tipo de modelo si lo que buscamos es realizar consultas de forma rápida y óptima. Para este caso de uso es mejor desnormalizar los datos.
+
+Como hemos comentado antes, los documentos que usan este tipo de modelo tienen que estar en el mismo shard del clúster, y para conseguir esto hay que especificar **routing** cuando creamos, actualizamos o eliminamos documentos hijo.
+
+# Diseños para escalar
+
+## Datos basados en tiempo
+
+Elasticsearch está especialmente diseñado para trabajar con datos basados en el tiempo, en el sentido que los datos más viejos son menos relevantes que los más recientes, como los logs que dejan las aplicaciones. 
+
+De hecho, Elasticsearch proporciona el stack ELK para integrar plataformas de logging y hacer la consulta de logging más fácil. El stack también permite la visualización de estos logs.
+
+Los logs que genera una aplicación pueden ser tremendos en una franja de tiempo corta. Se podría pensar que podríamos crear un índice que contenga todos los logs generados en un año, o un mes, por ejemplo, pero esto ocuparía mucho espacio y las búsquedas serían muy ineficientes. Una mejor estrategía es tener un índice por una franja de tiempo mejor, como por ejemplo, tener un índice por día.
+
+Como estos índices debemos crearlos cada cierto tiempo (hora, día o mes), hacerlo manualmente sería claramente un dolor. Elasticsearch nos permite crear plantillas de índices donde podemos configurar el nombre del índice, los shards que se le asignarán, mapear tipos, etc...
+
+Para crear estas templates hay que usar el REST API **_template**.
